@@ -1,0 +1,294 @@
+// Copyright 2010-2021 the original author or authors.
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+// 	http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package config
+
+import (
+	"io/ioutil"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+
+	"gopkg.in/yaml.v2"
+)
+
+type void struct{}
+
+var null void
+
+var (
+	env          *environment
+	defaultFiles = []string{"application.yml", "config/application.yml"}
+	rwLock       = &sync.RWMutex{}
+)
+
+type environment struct {
+	files   *[]string
+	configs *[]map[interface{}]interface{}
+}
+
+func init() {
+	names := defaultFiles
+	envConfigFiles := os.Getenv("STELLA_CONFIG_FILES")
+	if envConfigFiles != "" {
+		files := strings.Split(envConfigFiles, ",")
+		names = append(files, names...)
+	}
+	maps := make([]map[interface{}]interface{}, 0)
+	for _, file := range names {
+		m := make(map[interface{}]interface{})
+		bts, err := ioutil.ReadFile(file)
+		if err != nil {
+			maps = append(maps, m)
+			continue
+		}
+		err = yaml.Unmarshal(bts, &m)
+		if err != nil {
+			maps = append(maps, m)
+			continue
+		}
+		maps = append(maps, m)
+		log.Printf("Load configuration file: %s success\n", file)
+	}
+	env = &environment{&names, &maps}
+}
+
+func LoadConfig(files ...string) {
+	rwLock.Lock()
+	defer rwLock.Unlock()
+	envFiles := *env.files
+	envConfigs := *env.configs
+	alreadyDone := make(map[string]void)
+	for _, f := range envFiles {
+		alreadyDone[f] = null
+	}
+	maps := make([]map[interface{}]interface{}, 0)
+	for _, file := range files {
+		if _, done := alreadyDone[file]; done {
+			continue
+		}
+		m := make(map[interface{}]interface{})
+		bts, err := ioutil.ReadFile(file)
+		if err != nil {
+			maps = append(maps, m)
+			log.Printf("Failed to read configuration file: %s, with error %v\n", file, err)
+			continue
+		}
+		err = yaml.Unmarshal(bts, &m)
+		if err != nil {
+			log.Printf("Failed to unmarshal configuration file: %s, with error %v\n", file, err)
+			maps = append(maps, m)
+			continue
+		}
+		maps = append(maps, m)
+	}
+	fs := append(envFiles, files...)
+	cs := append(envConfigs, maps...)
+	env.files = &fs
+	env.configs = &cs
+}
+
+func (p *environment) tryLoadOSEnv(key string) (interface{}, bool) {
+	key = strings.ReplaceAll(key, ".", "_")
+	key = strings.ReplaceAll(key, "-", "_")
+	key = "STELLA_" + strings.ToUpper(key)
+	value := os.Getenv(key)
+	if value == "" {
+		return nil, false
+	}
+	return value, true
+}
+
+func (p *environment) Get(key string) (interface{}, bool) {
+	rwLock.RLock()
+	defer rwLock.RUnlock()
+	value, ok := p.tryLoadOSEnv(key)
+	if ok {
+		return value, ok
+	}
+	for _, config := range *p.configs {
+		value, ok := get(config, key)
+		if ok {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
+func (p *environment) GetInt(key string) (int, bool) {
+	value, ok := p.Get(key)
+	if !ok {
+		return 0, false
+	}
+	switch value := value.(type) {
+	case int:
+		return value, true
+	case string:
+		intValue, err := strconv.Atoi(value)
+		if err != nil {
+			log.Printf("Failed to get configuration: %s=%s\n", key, value)
+			return 0, false
+		}
+		return intValue, true
+	default:
+		log.Printf("Failed to get configuration: %s=%v\n", key, value)
+		return 0, false
+	}
+}
+
+func (p *environment) GetString(key string) (string, bool) {
+	value, ok := p.Get(key)
+	if !ok {
+		return "", false
+	}
+	switch value := value.(type) {
+	case string:
+		return value, true
+	case int:
+		return strconv.Itoa(value), true
+	default:
+		log.Printf("Failed to get configuration: %s=%v\n", key, value)
+		return "", false
+	}
+}
+
+func (p *environment) GetBool(key string) (bool, bool) {
+	value, ok := p.Get(key)
+	if !ok {
+		return false, false
+	}
+	switch value := value.(type) {
+	case bool:
+		return value, true
+	case int:
+		if value == 0 {
+			return false, true
+		}
+		if value == 1 {
+			return true, true
+		}
+		log.Printf("Failed to get configuration: %s=%d\n", key, value)
+		return false, false
+	case string:
+		boolValue, err := strconv.ParseBool(value)
+		if err != nil {
+			log.Printf("Failed to get configuration: %s=%s\n", key, value)
+			return false, false
+		}
+		return boolValue, true
+	default:
+		log.Printf("Failed to get configuration: %s=%s\n", key, value)
+		return false, false
+	}
+}
+
+func (p *environment) GetOr(key string, defaultValue interface{}) interface{} {
+	value, ok := p.Get(key)
+	if !ok {
+		return defaultValue
+	} else {
+		return value
+	}
+}
+
+func (p *environment) GetIntOr(key string, defaultValue int) int {
+	value, ok := p.GetInt(key)
+	if !ok {
+		return defaultValue
+	} else {
+		return value
+	}
+}
+
+func (p *environment) GetBoolOr(key string, defaultValue bool) bool {
+	value, ok := p.GetBool(key)
+	if !ok {
+		return defaultValue
+	} else {
+		return value
+	}
+}
+
+func (p *environment) GetStringOr(key string, defaultValue string) string {
+	value, ok := p.GetString(key)
+	if !ok {
+		return defaultValue
+	} else {
+		return value
+	}
+}
+
+func get(config interface{}, key string) (interface{}, bool) {
+	switch config.(type) {
+	case map[interface{}]interface{}:
+		m := config.(map[interface{}]interface{})
+		tokens := strings.Split(key, ".")
+		tokensLen := len(tokens)
+		for i := range tokens {
+			tmpK := strings.Join(tokens[:tokensLen-i], ".")
+			v, ok := m[tmpK]
+			if ok {
+				switch v.(type) {
+				case map[interface{}]interface{}:
+					leftKey := strings.Join(tokens[tokensLen-i:], ".")
+					if len(leftKey) == 0 {
+						return v, true
+					}
+					return get(v, leftKey)
+				default:
+					if i == 0 {
+						return v, true
+					}
+				}
+			}
+		}
+		return nil, false
+	default:
+		return nil, false
+	}
+}
+
+func Get(key string) (interface{}, bool) {
+	return env.Get(key)
+}
+
+func GetInt(key string) (int, bool) {
+	return env.GetInt(key)
+}
+
+func GetString(key string) (string, bool) {
+	return env.GetString(key)
+}
+
+func GetBool(key string) (bool, bool) {
+	return env.GetBool(key)
+}
+
+func GetOr(key string, defaultValue interface{}) interface{} {
+	return env.GetOr(key, defaultValue)
+}
+
+func GetIntOr(key string, defaultValue int) int {
+	return env.GetIntOr(key, defaultValue)
+}
+
+func GetBoolOr(key string, defaultValue bool) bool {
+	return env.GetBoolOr(key, defaultValue)
+}
+
+func GetStringOr(key string, defaultValue string) string {
+	return env.GetStringOr(key, defaultValue)
+}
