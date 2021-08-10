@@ -115,6 +115,12 @@ func createDB(prefix string) (*sql.DB, error) {
 			for k, v := range cparams {
 				params[k] = fmt.Sprintf("%s", v)
 			}
+		case map[interface{}]interface{}:
+			for k, v := range cparams {
+				key := fmt.Sprintf("%s", k)
+				value := fmt.Sprintf("%s", v)
+				params[key] = value
+			}
 		default:
 		}
 	}

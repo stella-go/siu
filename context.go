@@ -56,8 +56,8 @@ const (
 	LoggerMaxFileSizesEnvKey = LoggerEnvKey + ".maxFileSize"
 )
 
-type Rotater interface {
-	Rotater() map[string]gin.HandlerFunc
+type Router interface {
+	Router() map[string]gin.HandlerFunc
 }
 
 type context struct {
@@ -66,14 +66,14 @@ type context struct {
 	middleware []middleware.OrderedMiddleware
 	ctx        map[string]interface{}
 
-	rotates []Rotater
+	routers []Router
 }
 
 var ctx *context = &context{
 	auto:       make([]autoconfig.AutoConfig, 0),
 	middleware: make([]middleware.OrderedMiddleware, 0),
 	ctx:        make(map[string]interface{}),
-	rotates:    make([]Rotater, 0),
+	routers:    make([]Router, 0),
 }
 
 func init() {
@@ -143,8 +143,8 @@ func (c *context) Use(middleware ...middleware.OrderedMiddleware) {
 	c.middleware = append(c.middleware, middleware...)
 }
 
-func (c *context) Rotate(rotater ...Rotater) {
-	c.rotates = append(c.rotates, rotater...)
+func (c *context) Route(router ...Router) {
+	c.routers = append(c.routers, router...)
 }
 
 func (c *context) Set(key string, value interface{}) {
@@ -242,6 +242,7 @@ func (c *context) Run() {
 	defer func() {
 		for i := len(s) - 1; i >= 0; i-- {
 			if s[i].Condition() {
+				ctx.RootLogger().INFO("%s is stoping", s[i].Name())
 				err := s[i].OnStop()
 				if err != nil {
 					ctx.RootLogger().ERROR("", err)
@@ -280,8 +281,8 @@ func xmain() error {
 			server.Use(middleware.Function())
 		}
 	}
-	for _, rotate := range ctx.rotates {
-		rs := rotate.Rotater()
+	for _, route := range ctx.routers {
+		rs := route.Router()
 		for name, function := range rs {
 			tokens := strings.Split(name, " ")
 			server.Handle(strings.ToUpper(tokens[0]), tokens[1], function)
@@ -295,8 +296,10 @@ func xmain() error {
 			panic(err)
 		}
 	}()
+	ctx.RootLogger().INFO("Listening on: %s:%s", ip, port)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	ctx.RootLogger().INFO("Server stoping...")
 	return nil
 }

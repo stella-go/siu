@@ -42,8 +42,8 @@ func Use(middleware ...middleware.OrderedMiddleware) {
 	ctx.Use(middleware...)
 }
 
-func Rotate(rotater ...Rotater) {
-	ctx.Rotate(rotater...)
+func Route(router ...Router) {
+	ctx.Route(router...)
 }
 
 func Get(key string) (interface{}, bool) {
