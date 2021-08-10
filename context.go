@@ -106,7 +106,12 @@ func initLogger() {
 		FileName:    fileName,
 	}
 	rotateWriter, _ := logger.NewConfigRotateWriter(cfg)
-	writer := io.MultiWriter(os.Stdout, rotateWriter)
+	var writer io.Writer
+	if fileName == "" || fileName == "stdout" {
+		writer = rotateWriter
+	} else {
+		writer = io.MultiWriter(os.Stdout, rotateWriter)
+	}
 	rootLogger := logger.NewRootLogger(level, &logger.DefaultFormatter{}, writer)
 	ctx.rootLogger = rootLogger.GetLogger("SIU")
 }
