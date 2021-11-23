@@ -87,11 +87,6 @@ func init() {
 }
 
 func initLogger() {
-	_, ok := ctx.EnvGet(LoggerEnvKey)
-	if !ok {
-		ctx.rootLogger = logger.GetLogger("SIU")
-		return
-	}
 	slevel := ctx.EnvGetStringOr(LoggerLevelEnvKey, "info")
 	level := logger.Parse(slevel)
 
