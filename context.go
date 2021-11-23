@@ -17,7 +17,6 @@ package siu
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -36,13 +35,13 @@ import (
 
 const (
 	defaultBanner = `
-     _______. __   __    __  
-    /       ||  | |  |  |  | 
-   |   (----'|  | |  |  |  | 
-    \   \    |  | |  |  |  | 
-.----)   |   |  | |  '--'  | 
-|_______/    |__|  \______/  
-        Version %s
+	     _______. __   __    __  
+	    /       ||  | |  |  |  | 
+	   |   (----'|  | |  |  |  | 
+	    \   \    |  | |  |  |  | 
+	.----)   |   |  | |  '--'  | 
+	|_______/    |__|  \______/  
+	        Version %s
 `
 )
 
@@ -58,6 +57,11 @@ const (
 
 type Router interface {
 	Router() map[string]gin.HandlerFunc
+}
+
+type MiddlewareRouter interface {
+	Router
+	Middleware() []gin.HandlerFunc
 }
 
 type context struct {
@@ -105,12 +109,9 @@ func initLogger() {
 		FilePath:    filePath,
 		FileName:    fileName,
 	}
-	rotateWriter, _ := logger.NewConfigRotateWriter(cfg)
-	var writer io.Writer
-	if fileName == "" || fileName == "stdout" {
-		writer = rotateWriter
-	} else {
-		writer = io.MultiWriter(os.Stdout, rotateWriter)
+	writer, err := logger.NewConfigRotateWriter(cfg)
+	if err != nil {
+		panic(err)
 	}
 	rootLogger := logger.NewRootLogger(level, &logger.DefaultFormatter{}, writer)
 	ctx.rootLogger = rootLogger.GetLogger("SIU")
@@ -286,11 +287,17 @@ func xmain() error {
 			server.Use(middleware.Function())
 		}
 	}
-	for _, route := range ctx.routers {
-		rs := route.Router()
+	for _, router := range ctx.routers {
+		rs := router.Router()
+		group := server.Group("")
+		if mr, ok := router.(MiddlewareRouter); ok {
+			if ms := mr.Middleware(); ms != nil {
+				group.Use(ms...)
+			}
+		}
 		for name, function := range rs {
 			tokens := strings.Split(name, " ")
-			server.Handle(strings.ToUpper(tokens[0]), tokens[1], function)
+			group.Handle(strings.ToUpper(tokens[0]), tokens[1], function)
 		}
 	}
 	ip := ctx.EnvGetStringOr("server.ip", "0.0.0.0")
