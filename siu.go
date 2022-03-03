@@ -34,6 +34,22 @@ func NewLogger(name string) *logger.Logger {
 	return ctx.NewLogger(name)
 }
 
+func DEBUG(format string, arr ...interface{}) {
+	ctx.DEBUG(format, arr...)
+}
+
+func INFO(format string, arr ...interface{}) {
+	ctx.INFO(format, arr...)
+}
+
+func WARN(format string, arr ...interface{}) {
+	ctx.WARN(format, arr...)
+}
+
+func ERROR(format string, arr ...interface{}) {
+	ctx.ERROR(format, arr...)
+}
+
 func AutoConfig(auto ...autoconfig.AutoConfig) {
 	ctx.AutoConfig(auto...)
 }

@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/signal"
 	"sort"
@@ -47,6 +48,7 @@ const (
 
 const (
 	LoggerEnvKey             = "logger"
+	LoggerUseEnvKey          = LoggerEnvKey + ".siu"
 	LoggerLevelEnvKey        = LoggerEnvKey + ".level"
 	LoggerDaliyEnvKey        = LoggerEnvKey + ".daliy"
 	LoggerPathEnvKey         = LoggerEnvKey + ".path"
@@ -80,6 +82,9 @@ var ctx *context = &context{
 	routers:    make([]Router, 0),
 }
 
+var logLevel = logger.Parse(ctx.EnvGetStringOr(LoggerLevelEnvKey, "info"))
+var logUse = ctx.EnvGetBoolOr(LoggerUseEnvKey, true)
+
 func init() {
 	initLogger()
 	banner()
@@ -87,9 +92,6 @@ func init() {
 }
 
 func initLogger() {
-	slevel := ctx.EnvGetStringOr(LoggerLevelEnvKey, "info")
-	level := logger.Parse(slevel)
-
 	daily := ctx.EnvGetBoolOr(LoggerDaliyEnvKey, true)
 	filePath := ctx.EnvGetStringOr(LoggerPathEnvKey, ".")
 	fileName := ctx.EnvGetStringOr(LoggerFileEnvKey, "stdout")
@@ -108,19 +110,24 @@ func initLogger() {
 	if err != nil {
 		panic(err)
 	}
-	rootLogger := logger.NewRootLogger(level, &logger.DefaultFormatter{}, writer)
-	ctx.rootLogger = rootLogger.GetLogger("SIU")
+	if logUse {
+		rootLogger := logger.NewRootLogger(logLevel, &logger.DefaultFormatter{}, writer)
+		ctx.rootLogger = rootLogger.GetLogger("SIU")
+	} else {
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.SetOutput(writer)
+	}
 }
 
 func banner() {
 	if bannerFile, ok := ctx.EnvGetString("banner.file"); ok {
 		bannerBts, err := ioutil.ReadFile(bannerFile)
 		if err != nil {
-			ctx.RootLogger().INFO(string(bannerBts))
+			ctx.INFO(string(bannerBts))
 			return
 		}
 	}
-	ctx.RootLogger().INFO(fmt.Sprintf(defaultBanner, VERSION))
+	ctx.INFO(fmt.Sprintf(defaultBanner, VERSION))
 }
 
 func setDefault() {
@@ -134,6 +141,70 @@ func (c *context) RootLogger() *logger.Logger {
 
 func (c *context) NewLogger(name string) *logger.Logger {
 	return c.rootLogger.GetLogger(name)
+}
+
+func (c *context) DEBUG(format string, arr ...interface{}) {
+	if logUse {
+		ctx.RootLogger().DEBUG(format, arr...)
+	} else {
+		if logLevel <= logger.DebugLevel {
+			if len(arr) > 0 {
+				if _, ok := arr[len(arr)-1].(error); ok {
+					format += " %v"
+				}
+			}
+			msg := fmt.Sprintf(format, arr...)
+			log.Println("DEBUG - " + msg)
+		}
+	}
+}
+
+func (c *context) INFO(format string, arr ...interface{}) {
+	if logUse {
+		ctx.RootLogger().INFO(format, arr...)
+	} else {
+		if logLevel <= logger.InfoLevel {
+			if len(arr) > 0 {
+				if _, ok := arr[len(arr)-1].(error); ok {
+					format += " %v"
+				}
+			}
+			msg := fmt.Sprintf(format, arr...)
+			log.Println("INFO  - " + msg)
+		}
+	}
+}
+
+func (c *context) WARN(format string, arr ...interface{}) {
+	if logUse {
+		ctx.RootLogger().WARN(format, arr...)
+	} else {
+		if logLevel <= logger.WarnLevel {
+			if len(arr) > 0 {
+				if _, ok := arr[len(arr)-1].(error); ok {
+					format += " %v"
+				}
+			}
+			msg := fmt.Sprintf(format, arr...)
+			log.Println("WARN  - " + msg)
+		}
+	}
+}
+
+func (c *context) ERROR(format string, arr ...interface{}) {
+	if logUse {
+		ctx.RootLogger().ERROR(format, arr...)
+	} else {
+		if logLevel < logger.ErrorLevel {
+			if len(arr) > 0 {
+				if _, ok := arr[len(arr)-1].(error); ok {
+					format += " %v"
+				}
+			}
+			msg := fmt.Sprintf(format, arr...)
+			log.Println("ERROR - " + msg)
+		}
+	}
 }
 
 func (c *context) AutoConfig(auto ...autoconfig.AutoConfig) {
@@ -243,10 +314,10 @@ func (c *context) Run() {
 	defer func() {
 		for i := len(s) - 1; i >= 0; i-- {
 			if s[i].Condition() {
-				ctx.RootLogger().INFO("%s is stoping", s[i].Name())
+				ctx.INFO("%s is stoping", s[i].Name())
 				err := s[i].OnStop()
 				if err != nil {
-					ctx.RootLogger().ERROR("", err)
+					ctx.ERROR("", err)
 				}
 			}
 		}
@@ -254,10 +325,10 @@ func (c *context) Run() {
 
 	for _, a := range s {
 		if a.Condition() {
-			ctx.RootLogger().INFO("%s is starting", a.Name())
+			ctx.INFO("%s is starting", a.Name())
 			err := a.OnStart()
 			if err != nil {
-				ctx.RootLogger().ERROR("", err)
+				ctx.ERROR("", err)
 				panic(err)
 			} else {
 				c.Set(a.Name(), a.Get())
@@ -303,10 +374,10 @@ func xmain() error {
 			panic(err)
 		}
 	}()
-	ctx.RootLogger().INFO("Listening on: %s:%s", ip, port)
+	ctx.INFO("Listening on: %s:%s", ip, port)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	ctx.RootLogger().INFO("Server stoping...")
+	ctx.INFO("Server stoping...")
 	return nil
 }
