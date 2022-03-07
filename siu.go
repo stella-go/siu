@@ -17,6 +17,7 @@ package siu
 import (
 	"database/sql"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/go-zookeeper/zk"
 	"github.com/stella-go/logger"
@@ -116,6 +117,10 @@ func EnvGetBoolOr(key string, defaultValue bool) bool {
 
 func EnvGetStringOr(key string, defaultValue string) string {
 	return ctx.EnvGetStringOr(key, defaultValue)
+}
+
+func Server() *gin.Engine {
+	return ctx.Server()
 }
 
 func Run() {

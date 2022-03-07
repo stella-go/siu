@@ -71,8 +71,9 @@ type context struct {
 	auto       []autoconfig.AutoConfig
 	middleware []middleware.OrderedMiddleware
 	ctx        map[string]interface{}
+	routers    []Router
 
-	routers []Router
+	server *gin.Engine
 }
 
 var ctx *context = &context{
@@ -80,6 +81,7 @@ var ctx *context = &context{
 	middleware: make([]middleware.OrderedMiddleware, 0),
 	ctx:        make(map[string]interface{}),
 	routers:    make([]Router, 0),
+	server:     gin.New(),
 }
 
 var logLevel = logger.Parse(ctx.EnvGetStringOr(LoggerLevelEnvKey, "info"))
@@ -307,6 +309,10 @@ func (c *context) EnvGetStringOr(key string, defaultValue string) string {
 	return config.GetStringOr(key, defaultValue)
 }
 
+func (c *context) Server() *gin.Engine {
+	return c.server
+}
+
 func (c *context) Run() {
 	s := autoconfig.AutoConfigSlice(ctx.auto)
 	sort.Sort(s)
@@ -345,7 +351,8 @@ func (c *context) Run() {
 func xmain() error {
 	mode := ctx.EnvGetStringOr("server.mode", "release")
 	gin.SetMode(mode)
-	server := gin.New()
+	server := ctx.server
+	server.SetTrustedProxies(nil)
 	m := middleware.OrderedMiddlewareSlice(ctx.middleware)
 	sort.Sort(m)
 	for _, middleware := range m {
