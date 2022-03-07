@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	ResourcesPath            = "/resources"
 	ResourceMiddleDisableKey = "middleware.resource.disable"
 	ResourceMiddleOrder      = 20
 )
@@ -83,6 +84,12 @@ func Serve(urlPrefix string, fs ServeFileSystem) gin.HandlerFunc {
 		fileserver = http.StripPrefix(urlPrefix, fileserver)
 	}
 	return func(c *gin.Context) {
+		uri := c.Request.URL.Path
+		if uri == "/" || uri == "/index.html" {
+			c.Redirect(http.StatusFound, "/resources/")
+			c.Abort()
+			return
+		}
 		if fs.Exists(urlPrefix, c.Request.URL.Path) {
 			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
