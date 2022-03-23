@@ -83,6 +83,10 @@ func RedisCluster() (*redis.ClusterClient, bool) {
 	return ctx.RedisCluster()
 }
 
+func RedisCmdable() (redis.Cmdable, bool) {
+	return ctx.RedisCmdable()
+}
+
 func Zookeeper() (*zk.Conn, bool) {
 	return ctx.Zookeeper()
 }

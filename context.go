@@ -268,6 +268,18 @@ func (c *context) RedisCluster() (*redis.ClusterClient, bool) {
 	return nil, false
 }
 
+func (c *context) RedisCmdable() (redis.Cmdable, bool) {
+	if v, ok := c.RedisCluster(); ok {
+		return v, ok
+	} else {
+		if v, ok := c.Redis(); ok {
+			return v, ok
+		} else {
+			return nil, false
+		}
+	}
+}
+
 func (c *context) Zookeeper() (*zk.Conn, bool) {
 	if v, ok := c.Get(autoconfig.ZookeeperKey); ok {
 		if c, ok := v.(*zk.Conn); ok {
