@@ -159,9 +159,12 @@ Obtaining a Redis instance:
 ```go
 redis,ok := siu.Redis()
 redisCluster,ok := siu.RedisCluster()
+
+cmdable,ok := siu.RedisCmdable()
+// Cmdable is the common interface of RedisClient and RedisClusterClient
 ```
 
-### Redis Related Configuration
+### Zookeeper Related Configuration
 ```yml
 zookeeper:
   servers: 127.0.0.1:2181,127.0.0.1:2182,127.0.0.1:2183
@@ -169,6 +172,13 @@ zookeeper:
 ```
 - **zookeeper.servers** zookeeper servers ip:port, if it's a cluster ip1:port1,ip2:port2,ip3:port3.
 - **zookeeper.sessionTimeoutKey** session timeout in milliseconds. Default value `60000`.
+
+## Middleware Related Configuration
+```yml
+middleware:
+  cros.disable: false # Sets whether to disable CROS, default false
+  resource.disable: false # Sets whether to disable resources serve, default false
+```
 
 ## Custom Component
 Implement the AutoConfig interface and use `siu.AutoConfig()` to register.
