@@ -63,12 +63,13 @@ server:
   port: 8080
 ```
 - **server.mode** Gin server mode. Optional value `release` or `debug`. Default value `release`.
-- **server.ip** Gin server ip. Default value `0.0.0.0`.
+- **server.ip** Gin server bind ip. Default value `0.0.0.0`.
 - **server.port** Gin server port. Default value `8080`.
 
 ### Logger Related Configuration
 ```yml
 logger:
+  siu: true
   level: info
   daliy: true
   path: ./logs
@@ -76,6 +77,7 @@ logger:
   maxFiles: 31
   maxFileSize: 200
 ```
+- **logger.siu** Whether to use the logging implementation of siu, set to false to use golang built-in log. Optional value `true` or `false`. Default value `true`.
 - **logger.level** Log Level. Optional value `debug`, `info`, `warn` or `error`. Default value `info`.
 - **logger.daliy** Whether to enable daily log rotating. Optional value `true` or `false`. Default value `true`.
 - **logger.path** Log Path Dir. Default value `.`.
