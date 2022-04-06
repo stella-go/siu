@@ -15,22 +15,24 @@
 package siu
 
 import (
-	"database/sql"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
-	"github.com/go-zookeeper/zk"
 	"github.com/stella-go/logger"
 	"github.com/stella-go/siu/autoconfig"
+	"github.com/stella-go/siu/common"
 	"github.com/stella-go/siu/config"
+	"github.com/stella-go/siu/inject"
 	"github.com/stella-go/siu/middleware"
 )
 
@@ -47,55 +49,108 @@ const (
 )
 
 const (
-	LoggerEnvKey             = "logger"
-	LoggerUseEnvKey          = LoggerEnvKey + ".siu"
-	LoggerLevelEnvKey        = LoggerEnvKey + ".level"
-	LoggerDaliyEnvKey        = LoggerEnvKey + ".daliy"
-	LoggerPathEnvKey         = LoggerEnvKey + ".path"
-	LoggerFileEnvKey         = LoggerEnvKey + ".file"
-	LoggerMaxFilesEnvKey     = LoggerEnvKey + ".maxFiles"
-	LoggerMaxFileSizesEnvKey = LoggerEnvKey + ".maxFileSize"
+	loggerEnvKey             = "logger"
+	loggerUseEnvKey          = loggerEnvKey + ".siu"
+	loggerLevelEnvKey        = loggerEnvKey + ".level"
+	loggerDaliyEnvKey        = loggerEnvKey + ".daliy"
+	loggerPathEnvKey         = loggerEnvKey + ".path"
+	loggerFileEnvKey         = loggerEnvKey + ".file"
+	loggerMaxFilesEnvKey     = loggerEnvKey + ".maxFiles"
+	loggerMaxFileSizesEnvKey = loggerEnvKey + ".maxFileSize"
 )
 
-type Router interface {
-	Router() map[string]gin.HandlerFunc
+type buildinLogger struct {
+	l        *log.Logger
+	logLevel logger.Level
 }
 
-type MiddlewareRouter interface {
-	Router
-	Middleware() []gin.HandlerFunc
+func newBuildinLogger(logLevel logger.Level, writer io.Writer) *buildinLogger {
+	l := log.New(writer, "", log.LstdFlags|log.Lshortfile)
+	return &buildinLogger{l: l, logLevel: logLevel}
+}
+
+func (p *buildinLogger) DEBUG(format string, arr ...interface{}) {
+	if p.logLevel <= logger.DebugLevel {
+		if len(arr) > 0 {
+			if _, ok := arr[len(arr)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, arr...)
+		p.l.Output(2, "DEBUG - "+msg)
+	}
+}
+
+func (p *buildinLogger) INFO(format string, arr ...interface{}) {
+	if p.logLevel <= logger.InfoLevel {
+		if len(arr) > 0 {
+			if _, ok := arr[len(arr)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, arr...)
+		log.Output(2, "INFO  - "+msg)
+	}
+}
+
+func (p *buildinLogger) WARN(format string, arr ...interface{}) {
+	if p.logLevel <= logger.WarnLevel {
+		if len(arr) > 0 {
+			if _, ok := arr[len(arr)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, arr...)
+		log.Output(2, "WARN  - "+msg)
+	}
+}
+
+func (p *buildinLogger) ERROR(format string, arr ...interface{}) {
+	if p.logLevel < logger.ErrorLevel {
+		if len(arr) > 0 {
+			if _, ok := arr[len(arr)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, arr...)
+		log.Output(2, "ERROR - "+msg)
+	}
+}
+
+func (p *buildinLogger) Level() logger.Level {
+	return p.logLevel
 }
 
 type context struct {
-	rootLogger *logger.Logger
-	auto       []autoconfig.AutoConfig
+	environment config.TypedConfig
+	logger      Logger
+
+	auto       []autoconfig.AutoFactory
 	middleware []middleware.OrderedMiddleware
-	ctx        map[string]interface{}
 	routers    []Router
+
+	store *sync.Map
 
 	server *gin.Engine
 }
 
-var ctx *context = &context{
-	auto:       make([]autoconfig.AutoConfig, 0),
-	middleware: make([]middleware.OrderedMiddleware, 0),
-	ctx:        make(map[string]interface{}),
-	routers:    make([]Router, 0),
+func newContext(environment config.TypedConfig, contextLogger Logger, server *gin.Engine) *context {
+	ctx := &context{environment, contextLogger, make([]autoconfig.AutoFactory, 0), make([]middleware.OrderedMiddleware, 0), make([]Router, 0), &sync.Map{}, server}
+	if leveledLogger, ok := contextLogger.(LeveledLogger); ok {
+		common.SetLevel(leveledLogger.Level())
+	}
+	ctx.banner()
+	return ctx
 }
 
-var logLevel = logger.Parse(ctx.EnvGetStringOr(LoggerLevelEnvKey, "info"))
-var logUse = ctx.EnvGetBoolOr(LoggerUseEnvKey, true)
-
-func init() {
-	initLogger()
-}
-
-func initLogger() {
-	daily := ctx.EnvGetBoolOr(LoggerDaliyEnvKey, true)
-	filePath := ctx.EnvGetStringOr(LoggerPathEnvKey, ".")
-	fileName := ctx.EnvGetStringOr(LoggerFileEnvKey, "stdout")
-	maxFiles := ctx.EnvGetIntOr(LoggerMaxFilesEnvKey, 30)
-	maxFileSize := ctx.EnvGetIntOr(LoggerMaxFileSizesEnvKey, 200)
+func newEnvironmentContext(environment config.TypedConfig) *context {
+	logUse := environment.GetBoolOr(loggerUseEnvKey, true)
+	logLevel := logger.Parse(environment.GetStringOr(loggerLevelEnvKey, "info"))
+	daily := environment.GetBoolOr(loggerDaliyEnvKey, true)
+	filePath := environment.GetStringOr(loggerPathEnvKey, ".")
+	fileName := environment.GetStringOr(loggerFileEnvKey, "stdout")
+	maxFiles := environment.GetIntOr(loggerMaxFilesEnvKey, 30)
+	maxFileSize := environment.GetIntOr(loggerMaxFileSizesEnvKey, 200)
 
 	cfg := &logger.RotateConfig{
 		Enable:      true,
@@ -109,104 +164,60 @@ func initLogger() {
 	if err != nil {
 		panic(err)
 	}
+	var contextLogger Logger
 	if logUse {
-		rootLogger := logger.NewRootLogger(logLevel, &logger.DefaultFormatter{}, writer)
-		ctx.rootLogger = rootLogger.GetLogger("SIU")
+		contextLogger = logger.NewRootLogger(logLevel, &logger.DefaultFormatter{}, writer).GetLogger("SIU")
 	} else {
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
-		log.SetOutput(writer)
+		contextLogger = newBuildinLogger(logLevel, writer)
+		common.INFO("use buildin logger")
 	}
+
+	mode := environment.GetStringOr("server.mode", "release")
+	gin.SetMode(mode)
+	server := gin.New()
+	server.SetTrustedProxies(nil)
+
+	ctx := newContext(environment, contextLogger, server)
+
+	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{})
+	ctx.Use(&middleware.MiddlewareCROS{}, &middleware.MiddlewareResource{})
+
+	return ctx
 }
 
-func banner() {
-	if bannerFile, ok := ctx.EnvGetString("banner.file"); ok {
+func newDefaultContext() *context {
+	environment := &config.ConfigurationEnvironment{}
+	return newEnvironmentContext(environment)
+}
+
+func (c *context) banner() {
+	if bannerFile, ok := c.environment.GetString("banner.file"); ok {
 		bannerBts, err := ioutil.ReadFile(bannerFile)
 		if err != nil {
-			ctx.INFO(string(bannerBts))
+			c.logger.INFO(string(bannerBts))
 			return
 		}
 	}
-	ctx.INFO(fmt.Sprintf(defaultBanner, VERSION))
-}
-
-func setDefault() {
-	ctx.AutoConfig(&autoconfig.AutoMysql{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{})
-	ctx.Use(&middleware.MiddlewareCROS{}, &middleware.MiddlewareResource{})
-}
-
-func (c *context) RootLogger() *logger.Logger {
-	return c.rootLogger
-}
-
-func (c *context) NewLogger(name string) *logger.Logger {
-	return c.rootLogger.GetLogger(name)
+	c.logger.INFO(fmt.Sprintf(defaultBanner, VERSION))
 }
 
 func (c *context) DEBUG(format string, arr ...interface{}) {
-	if logUse {
-		ctx.RootLogger().DEBUG(format, arr...)
-	} else {
-		if logLevel <= logger.DebugLevel {
-			if len(arr) > 0 {
-				if _, ok := arr[len(arr)-1].(error); ok {
-					format += " %v"
-				}
-			}
-			msg := fmt.Sprintf(format, arr...)
-			log.Println("DEBUG - " + msg)
-		}
-	}
+	c.logger.DEBUG(format, arr...)
 }
 
 func (c *context) INFO(format string, arr ...interface{}) {
-	if logUse {
-		ctx.RootLogger().INFO(format, arr...)
-	} else {
-		if logLevel <= logger.InfoLevel {
-			if len(arr) > 0 {
-				if _, ok := arr[len(arr)-1].(error); ok {
-					format += " %v"
-				}
-			}
-			msg := fmt.Sprintf(format, arr...)
-			log.Println("INFO  - " + msg)
-		}
-	}
+	c.logger.INFO(format, arr...)
 }
 
 func (c *context) WARN(format string, arr ...interface{}) {
-	if logUse {
-		ctx.RootLogger().WARN(format, arr...)
-	} else {
-		if logLevel <= logger.WarnLevel {
-			if len(arr) > 0 {
-				if _, ok := arr[len(arr)-1].(error); ok {
-					format += " %v"
-				}
-			}
-			msg := fmt.Sprintf(format, arr...)
-			log.Println("WARN  - " + msg)
-		}
-	}
+	c.logger.WARN(format, arr...)
 }
 
 func (c *context) ERROR(format string, arr ...interface{}) {
-	if logUse {
-		ctx.RootLogger().ERROR(format, arr...)
-	} else {
-		if logLevel < logger.ErrorLevel {
-			if len(arr) > 0 {
-				if _, ok := arr[len(arr)-1].(error); ok {
-					format += " %v"
-				}
-			}
-			msg := fmt.Sprintf(format, arr...)
-			log.Println("ERROR - " + msg)
-		}
-	}
+	c.logger.ERROR(format, arr...)
 }
 
-func (c *context) AutoConfig(auto ...autoconfig.AutoConfig) {
+func (c *context) AutoFactory(auto ...autoconfig.AutoFactory) {
 	c.auto = append(c.auto, auto...)
 }
 
@@ -218,163 +229,124 @@ func (c *context) Route(router ...Router) {
 	c.routers = append(c.routers, router...)
 }
 
-func (c *context) Set(key string, value interface{}) {
-	c.ctx[key] = value
-}
-
 func (c *context) Get(key string) (interface{}, bool) {
-	value, ok := c.ctx[key]
-	return value, ok
+	return c.store.Load(key)
 }
 
-func (c *context) DataSource() (*sql.DB, bool) {
-	if v, ok := c.Get(autoconfig.MySQLDatasourceKey); ok {
-		dbs := v.(map[string]*sql.DB)
-		for _, db := range dbs {
-			return db, true
+func (c *context) Set(key string, value interface{}) {
+	c.store.Store(key, value)
+}
+
+type resolver struct {
+	env config.Config
+}
+
+func (r *resolver) Resolve(key string) (interface{}, bool) {
+	return r.env.Get(key)
+}
+
+func (c *context) register() {
+	{
+		if _, ok := inject.GetNamed("environment"); !ok {
+			err := inject.RegisterNamed("environment", c.environment)
+			if err != nil {
+				panic(err)
+			}
+		}
+		refType := reflect.TypeOf((*config.TypedConfig)(nil)).Elem()
+		if _, ok := inject.GetTyped(refType); !ok {
+			err := inject.RegisterTyped(refType, c.environment)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
-	return nil, false
-}
-
-func (c *context) DataSourceWithName(name string) (*sql.DB, bool) {
-	if v, ok := c.Get(autoconfig.MySQLDatasourceKey); ok {
-		dbs := v.(map[string]*sql.DB)
-		if db, ok := dbs[name]; ok {
-			return db, true
+	{
+		if _, ok := inject.GetNamed("logger"); !ok {
+			err := inject.RegisterNamed("logger", c.logger)
+			if err != nil {
+				panic(err)
+			}
+		}
+		refType := reflect.TypeOf((*Logger)(nil)).Elem()
+		if _, ok := inject.GetTyped(refType); !ok {
+			err := inject.RegisterTyped(refType, c.logger)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
-	return nil, false
-}
-
-func (c *context) Redis() (*redis.Client, bool) {
-	if v, ok := c.Get(autoconfig.RedisKey); ok {
-		if c, ok := v.(*redis.Client); ok {
-			return c, true
-		}
-	}
-	return nil, false
-}
-
-func (c *context) RedisCluster() (*redis.ClusterClient, bool) {
-	if v, ok := c.Get(autoconfig.RedisKey); ok {
-		if c, ok := v.(*redis.ClusterClient); ok {
-			return c, true
-		}
-	}
-	return nil, false
-}
-
-func (c *context) RedisCmdable() (redis.Cmdable, bool) {
-	if v, ok := c.RedisCluster(); ok {
-		return v, ok
-	} else {
-		if v, ok := c.Redis(); ok {
-			return v, ok
-		} else {
-			return nil, false
-		}
-	}
-}
-
-func (c *context) Zookeeper() (*zk.Conn, bool) {
-	if v, ok := c.Get(autoconfig.ZookeeperKey); ok {
-		if c, ok := v.(*zk.Conn); ok {
-			return c, true
-		}
-	}
-	return nil, false
-}
-
-func (c *context) EnvGet(key string) (interface{}, bool) {
-	return config.Get(key)
-}
-
-func (c *context) EnvGetInt(key string) (int, bool) {
-	return config.GetInt(key)
-}
-
-func (c *context) EnvGetString(key string) (string, bool) {
-	return config.GetString(key)
-}
-
-func (c *context) EnvGetBool(key string) (bool, bool) {
-	return config.GetBool(key)
-}
-
-func (c *context) EnvGetOr(key string, defaultValue interface{}) interface{} {
-	return config.GetOr(key, defaultValue)
-}
-
-func (c *context) EnvGetIntOr(key string, defaultValue int) int {
-	return config.GetIntOr(key, defaultValue)
-}
-
-func (c *context) EnvGetBoolOr(key string, defaultValue bool) bool {
-	return config.GetBoolOr(key, defaultValue)
-}
-
-func (c *context) EnvGetStringOr(key string, defaultValue string) string {
-	return config.GetStringOr(key, defaultValue)
-}
-
-func (c *context) Server() *gin.Engine {
-	return c.server
 }
 
 func (c *context) Run() {
-	banner()
-	setDefault()
-	s := autoconfig.AutoConfigSlice(ctx.auto)
-	sort.Sort(s)
+	c.register()
 
-	defer func() {
-		for i := len(s) - 1; i >= 0; i-- {
-			if s[i].Condition() {
-				ctx.INFO("%s is stoping", s[i].Name())
-				err := s[i].OnStop()
-				if err != nil {
-					ctx.ERROR("", err)
-				}
-			}
+	resolver := &resolver{c.environment}
+	cs := autoconfig.AutoFactorySlice(c.auto)
+	sort.Sort(cs)
+	for _, a := range cs {
+		err := inject.Inject(resolver, a)
+		if err != nil {
+			panic(err)
 		}
-	}()
-
-	for _, a := range s {
 		if a.Condition() {
-			ctx.INFO("%s is starting", a.Name())
+			common.DEBUG("%s is starting", a.Name())
 			err := a.OnStart()
 			if err != nil {
-				ctx.ERROR("", err)
+				common.ERROR("%v", err)
 				panic(err)
-			} else {
-				c.Set(a.Name(), a.Get())
+			}
+			common.DEBUG("%s is start", a.Name())
+			for k, v := range a.Named() {
+				err := inject.RegisterNamed(k, v)
+				if err != nil {
+					panic(err)
+				}
+			}
+			for k, v := range a.Typed() {
+				err := inject.RegisterTyped(k, v)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+		}
+	}
+
+	defer func() {
+		for i := len(cs) - 1; i >= 0; i-- {
+			if cs[i].Condition() {
+				common.DEBUG("%s is stoping", cs[i].Name())
+				err := cs[i].OnStop()
+				if err != nil {
+					common.ERROR("%v", err)
+				}
+				common.DEBUG("%s is stop", cs[i].Name())
 			}
 		}
-	}
+		c.logger.INFO("Server is stop")
+	}()
 
-	err := xmain()
-	if err != nil {
-		panic(err)
-	}
-}
-
-func xmain() error {
-	mode := ctx.EnvGetStringOr("server.mode", "release")
-	gin.SetMode(mode)
-	ctx.server = gin.New()
-	server := ctx.server
-	server.SetTrustedProxies(nil)
-	m := middleware.OrderedMiddlewareSlice(ctx.middleware)
-	sort.Sort(m)
-	for _, middleware := range m {
-		if middleware.Condition() {
-			server.Use(middleware.Function())
+	ms := middleware.OrderedMiddlewareSlice(c.middleware)
+	sort.Sort(ms)
+	for _, m := range ms {
+		err := inject.Inject(resolver, m)
+		if err != nil {
+			panic(err)
+		}
+		if m.Condition() {
+			c.server.Use(m.Function())
 		}
 	}
-	for _, router := range ctx.routers {
+	for _, router := range c.routers {
+		err := inject.Inject(resolver, router)
+		if err != nil {
+			panic(err)
+		}
+	}
+	for _, router := range c.routers {
 		rs := router.Router()
-		group := server.Group("")
+		group := c.server.Group("")
 		if mr, ok := router.(MiddlewareRouter); ok {
 			if ms := mr.Middleware(); ms != nil {
 				group.Use(ms...)
@@ -385,18 +357,17 @@ func xmain() error {
 			group.Handle(strings.ToUpper(tokens[0]), tokens[1], function)
 		}
 	}
-	ip := ctx.EnvGetStringOr("server.ip", "0.0.0.0")
-	port := ctx.EnvGetStringOr("server.port", "8080")
+	ip := c.environment.GetStringOr("server.ip", "0.0.0.0")
+	port := c.environment.GetStringOr("server.port", "8080")
 	go func() {
-		err := server.Run(fmt.Sprintf("%s:%s", ip, port))
+		err := c.server.Run(fmt.Sprintf("%s:%s", ip, port))
 		if err != nil {
 			panic(err)
 		}
 	}()
-	ctx.INFO("Listening on: %s:%s", ip, port)
+	c.logger.INFO("Listening on: %s:%s", ip, port)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	ctx.INFO("Server stoping...")
-	return nil
+	c.logger.INFO("Server stoping...")
 }

@@ -17,6 +17,7 @@ package autoconfig
 import (
 	"database/sql"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -24,25 +25,32 @@ import (
 )
 
 const (
-	MySQLDatasourceKey   = "mysql"
-	MySQLDatasourceOrder = 20
+	MySQLDatasourceKey        = "mysql"
+	MySQLDatasourceDisableKey = MySQLDatasourceKey + ".disable"
+	MySQLDatasourceOrder      = 20
 )
 
 type AutoMysql struct {
-	dbs map[string]*sql.DB
+	Conf config.TypedConfig `@siu:"name='environment',default='type'"`
+	dbs  map[string]*sql.DB
 }
 
-func (*AutoMysql) Condition() bool {
-	_, ok := config.Get(MySQLDatasourceKey)
-	return ok
+func (p *AutoMysql) Condition() bool {
+	_, ok1 := p.Conf.Get(MySQLDatasourceKey)
+	v, ok2 := p.Conf.GetBool(MySQLDatasourceDisableKey)
+
+	if ok2 && v {
+		return false
+	}
+	return ok1
 }
 
 func (p *AutoMysql) OnStart() error {
 	p.dbs = make(map[string]*sql.DB)
 
-	datasources, _ := config.Get(MySQLDatasourceKey)
+	datasources, _ := p.Conf.Get(MySQLDatasourceKey)
 
-	db, err := createDB(MySQLDatasourceKey)
+	db, err := createDB(p.Conf, MySQLDatasourceKey)
 	if err != nil {
 		return err
 	}
@@ -55,12 +63,13 @@ func (p *AutoMysql) OnStart() error {
 		return nil
 	}
 	for datasource := range datasourcesMap {
-		db, err := createDB(MySQLDatasourceKey + "." + datasource)
+		name := MySQLDatasourceKey + "." + datasource
+		db, err := createDB(p.Conf, name)
 		if err != nil {
 			return err
 		}
 		if db != nil {
-			p.dbs[datasource] = db
+			p.dbs[name] = db
 		}
 	}
 	return nil
@@ -83,15 +92,31 @@ func (*AutoMysql) Name() string {
 	return MySQLDatasourceKey
 }
 
-func (p *AutoMysql) Get() interface{} {
-	return p.dbs
+func (p *AutoMysql) Named() map[string]interface{} {
+	n := make(map[string]interface{})
+	for k, v := range p.dbs {
+		n[k] = v
+	}
+	return n
 }
 
-func createDB(prefix string) (*sql.DB, error) {
-	user, ok1 := config.GetString(prefix + ".user")
-	passwd, ok2 := config.GetString(prefix + ".passwd")
-	addr, ok3 := config.GetString(prefix + ".addr")
-	dbName, ok4 := config.GetString(prefix + ".dbName")
+func (p *AutoMysql) Typed() map[reflect.Type]interface{} {
+	if len(p.dbs) == 1 {
+		for _, v := range p.dbs {
+			refType := reflect.TypeOf((*sql.DB)(nil))
+			return map[reflect.Type]interface{}{
+				refType: v,
+			}
+		}
+	}
+	return nil
+}
+
+func createDB(conf config.TypedConfig, prefix string) (*sql.DB, error) {
+	user, ok1 := conf.GetString(prefix + ".user")
+	passwd, ok2 := conf.GetString(prefix + ".passwd")
+	addr, ok3 := conf.GetString(prefix + ".addr")
+	dbName, ok4 := conf.GetString(prefix + ".dbName")
 
 	if !ok1 || !ok2 || !ok3 || !ok4 {
 		if prefix == MySQLDatasourceKey {
@@ -100,12 +125,12 @@ func createDB(prefix string) (*sql.DB, error) {
 		return nil, fmt.Errorf("mysql datasource user/passwd/addr/dbName can not be empty")
 	}
 
-	collation := config.GetStringOr(prefix+".collation", "utf8mb4_bin")
-	timeout := config.GetIntOr(prefix+".timeout", 60000)
-	readTimeout := config.GetIntOr(prefix+".readTimeout", 30000)
-	writeTimeout := config.GetIntOr(prefix+".writeTimeout", 30000)
+	collation := conf.GetStringOr(prefix+".collation", "utf8mb4_bin")
+	timeout := conf.GetIntOr(prefix+".timeout", 60000)
+	readTimeout := conf.GetIntOr(prefix+".readTimeout", 30000)
+	writeTimeout := conf.GetIntOr(prefix+".writeTimeout", 30000)
 
-	cparams, ok := config.Get(prefix + ".params")
+	cparams, ok := conf.Get(prefix + ".params")
 	params := make(map[string]string)
 	if ok {
 		switch cparams := cparams.(type) {
@@ -124,8 +149,8 @@ func createDB(prefix string) (*sql.DB, error) {
 		default:
 		}
 	}
-	maxOpenConns := config.GetIntOr(prefix+".maxOpenConns", 5)
-	maxIdleConns := config.GetIntOr(prefix+".maxIdleConns", 1)
+	maxOpenConns := conf.GetIntOr(prefix+".maxOpenConns", 5)
+	maxIdleConns := conf.GetIntOr(prefix+".maxIdleConns", 1)
 
 	cfg := mysql.Config{
 		User:                 user,

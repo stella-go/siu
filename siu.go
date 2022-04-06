@@ -15,118 +15,109 @@
 package siu
 
 import (
-	"database/sql"
+	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
-	"github.com/go-zookeeper/zk"
 	"github.com/stella-go/logger"
 	"github.com/stella-go/siu/autoconfig"
+	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/middleware"
 )
 
-// export method
-
-func RootLogger() *logger.Logger {
-	return ctx.RootLogger()
+type Logger interface {
+	DEBUG(format string, arr ...interface{})
+	INFO(format string, arr ...interface{})
+	WARN(format string, arr ...interface{})
+	ERROR(format string, arr ...interface{})
 }
 
-func NewLogger(name string) *logger.Logger {
-	return ctx.NewLogger(name)
+type LeveledLogger interface {
+	Logger
+	Level() logger.Level
+}
+
+type Router interface {
+	Router() map[string]gin.HandlerFunc
+}
+
+type MiddlewareRouter interface {
+	Router
+	Middleware() []gin.HandlerFunc
+}
+
+var ctx *context
+var once sync.Once
+
+// export method
+
+func LoadConfig(files ...string) {
+	config.LoadConfig(files...)
+}
+
+func New(environment config.TypedConfig, contextLogger Logger, server *gin.Engine) {
+	once.Do(func() {
+		ctx = newContext(environment, contextLogger, server)
+	})
+}
+
+func NewWithEnvironment(environment config.TypedConfig) {
+	once.Do(func() {
+		ctx = newEnvironmentContext(environment)
+	})
+}
+
+func Default() {
+	once.Do(func() {
+		ctx = newDefaultContext()
+	})
 }
 
 func DEBUG(format string, arr ...interface{}) {
+	Default()
 	ctx.DEBUG(format, arr...)
 }
 
 func INFO(format string, arr ...interface{}) {
+	Default()
 	ctx.INFO(format, arr...)
 }
 
 func WARN(format string, arr ...interface{}) {
+	Default()
 	ctx.WARN(format, arr...)
 }
 
 func ERROR(format string, arr ...interface{}) {
+	Default()
 	ctx.ERROR(format, arr...)
 }
 
-func AutoConfig(auto ...autoconfig.AutoConfig) {
-	ctx.AutoConfig(auto...)
+func AutoFactory(auto ...autoconfig.AutoFactory) {
+	Default()
+	ctx.AutoFactory(auto...)
 }
 
 func Use(middleware ...middleware.OrderedMiddleware) {
+	Default()
 	ctx.Use(middleware...)
 }
 
 func Route(router ...Router) {
+	Default()
 	ctx.Route(router...)
 }
 
 func Get(key string) (interface{}, bool) {
+	Default()
 	return ctx.Get(key)
 }
 
-func DataSource() (*sql.DB, bool) {
-	return ctx.DataSource()
-}
-
-func DataSourceWithName(name string) (*sql.DB, bool) {
-	return ctx.DataSourceWithName(name)
-}
-
-func Redis() (*redis.Client, bool) {
-	return ctx.Redis()
-}
-
-func RedisCluster() (*redis.ClusterClient, bool) {
-	return ctx.RedisCluster()
-}
-
-func RedisCmdable() (redis.Cmdable, bool) {
-	return ctx.RedisCmdable()
-}
-
-func Zookeeper() (*zk.Conn, bool) {
-	return ctx.Zookeeper()
-}
-
-func EnvGet(key string) (interface{}, bool) {
-	return ctx.EnvGet(key)
-}
-
-func EnvGetInt(key string) (int, bool) {
-	return ctx.EnvGetInt(key)
-}
-
-func EnvGetString(key string) (string, bool) {
-	return ctx.EnvGetString(key)
-}
-
-func EnvGetBool(key string) (bool, bool) {
-	return ctx.EnvGetBool(key)
-}
-
-func EnvGetOr(key string, defaultValue interface{}) interface{} {
-	return ctx.EnvGetOr(key, defaultValue)
-}
-
-func EnvGetIntOr(key string, defaultValue int) int {
-	return ctx.EnvGetIntOr(key, defaultValue)
-}
-
-func EnvGetBoolOr(key string, defaultValue bool) bool {
-	return ctx.EnvGetBoolOr(key, defaultValue)
-}
-
-func EnvGetStringOr(key string, defaultValue string) string {
-	return ctx.EnvGetStringOr(key, defaultValue)
-}
-
-func Server() *gin.Engine {
-	return ctx.Server()
+func Set(key string, value interface{}) {
+	Default()
+	ctx.Set(key, value)
 }
 
 func Run() {
+	Default()
 	ctx.Run()
 }

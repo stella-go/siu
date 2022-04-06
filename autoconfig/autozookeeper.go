@@ -16,6 +16,7 @@ package autoconfig
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -24,21 +25,30 @@ import (
 )
 
 const (
-	ZookeeperKey   = "zookeeper"
-	ZookeeperOrder = 10
+	ZookeeperKey               = "zookeeper"
+	ZookeeperDisableKey        = ZookeeperKey + ".disable"
+	ZookeeperServersKey        = ZookeeperKey + ".servers"
+	ZookeepersessionTimeoutKey = ZookeeperKey + ".sessionTimeout"
+	ZookeeperOrder             = 10
 )
 
 type AutoZookeeper struct {
+	Conf config.TypedConfig `@siu:"name='environment',default='type'"`
 	conn *zk.Conn
 }
 
-func (*AutoZookeeper) Condition() bool {
-	_, ok := config.Get(ZookeeperKey)
-	return ok
+func (p *AutoZookeeper) Condition() bool {
+	_, ok1 := p.Conf.Get(ZookeeperKey)
+	v, ok2 := p.Conf.GetBool(ZookeeperDisableKey)
+
+	if ok2 && v {
+		return false
+	}
+	return ok1
 }
 
 func (p *AutoZookeeper) OnStart() error {
-	conn, err := createZookeeper(ZookeeperKey)
+	conn, err := createZookeeper(p.Conf, ZookeeperKey)
 	if err != nil {
 		return err
 	}
@@ -63,17 +73,26 @@ func (*AutoZookeeper) Name() string {
 	return ZookeeperKey
 }
 
-func (p *AutoZookeeper) Get() interface{} {
-	return p.conn
+func (p *AutoZookeeper) Named() map[string]interface{} {
+	return map[string]interface{}{
+		ZookeeperKey: p.conn,
+	}
 }
 
-func createZookeeper(prefix string) (*zk.Conn, error) {
-	serversStr, ok := config.GetString(prefix + ".servers")
+func (p *AutoZookeeper) Typed() map[reflect.Type]interface{} {
+	refType := reflect.TypeOf((*zk.Conn)(nil))
+	return map[reflect.Type]interface{}{
+		refType: p.conn,
+	}
+}
+
+func createZookeeper(Conf config.TypedConfig, prefix string) (*zk.Conn, error) {
+	serversStr, ok := Conf.GetString(ZookeeperServersKey)
 	if !ok {
 		return nil, fmt.Errorf("zookeeper servers can not be empty")
 	}
 	servers := strings.Split(serversStr, ",")
-	timeout := config.GetIntOr(prefix+".sessionTimeoutKey", 60000)
+	timeout := Conf.GetIntOr(ZookeepersessionTimeoutKey, 60000)
 
 	conn, event, err := zk.Connect(servers, time.Duration(timeout)*time.Millisecond)
 	if err != nil {

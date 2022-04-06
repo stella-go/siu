@@ -14,25 +14,30 @@
 
 package autoconfig
 
-type AutoConfig interface {
+import (
+	"reflect"
+)
+
+type AutoFactory interface {
 	Condition() bool
 	OnStart() error
 	OnStop() error
 	Order() int
 	Name() string
-	Get() interface{}
+	Named() map[string]interface{}
+	Typed() map[reflect.Type]interface{}
 }
 
-type AutoConfigSlice []AutoConfig
+type AutoFactorySlice []AutoFactory
 
-func (p AutoConfigSlice) Len() int {
+func (p AutoFactorySlice) Len() int {
 	return len(p)
 }
 
-func (p AutoConfigSlice) Less(i, j int) bool {
+func (p AutoFactorySlice) Less(i, j int) bool {
 	return p[i].Order() < p[j].Order()
 }
 
-func (p AutoConfigSlice) Swap(i, j int) {
+func (p AutoFactorySlice) Swap(i, j int) {
 	p[i], p[j] = p[j], p[i]
 }

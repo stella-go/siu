@@ -23,22 +23,26 @@ import (
 )
 
 const (
-	ResourcesPath            = "/resources"
-	ResourceMiddleDisableKey = "middleware.resource.disable"
-	ResourceMiddleOrder      = 20
+	ResourceMiddlePrefixKey     = "middleware.resource.prefix"
+	ResourceMiddleDisableKey    = "middleware.resource.disable"
+	ResourceMiddleDefaultPrefix = "/resources"
+	ResourceMiddleOrder         = 20
 )
 
-type MiddlewareResource struct{}
+type MiddlewareResource struct {
+	Conf config.TypedConfig `@siu:"name='environment',default='type'"`
+}
 
 func (p *MiddlewareResource) Condition() bool {
-	if v, ok := config.GetBool(ResourceMiddleDisableKey); ok && v {
+	if v, ok := p.Conf.GetBool(ResourceMiddleDisableKey); ok && v {
 		return false
 	}
 	return true
 }
 
 func (p *MiddlewareResource) Function() gin.HandlerFunc {
-	return Serve("/resources", LocalFile("resources", true))
+	resourcesPrefix := p.Conf.GetStringOr(ResourceMiddleDisableKey, ResourceMiddleDefaultPrefix)
+	return Serve(resourcesPrefix, LocalFile("resources", true))
 }
 
 func (p *MiddlewareResource) Order() int {
@@ -78,19 +82,19 @@ func (l *LocalFileSystem) Open(name string) (http.File, error) {
 	return f, err
 }
 
-func Serve(urlPrefix string, fs ServeFileSystem) gin.HandlerFunc {
+func Serve(resourcesPrefix string, fs ServeFileSystem) gin.HandlerFunc {
 	fileserver := http.FileServer(fs)
-	if urlPrefix != "" {
-		fileserver = http.StripPrefix(urlPrefix, fileserver)
+	if resourcesPrefix != "" {
+		fileserver = http.StripPrefix(resourcesPrefix, fileserver)
 	}
 	return func(c *gin.Context) {
 		uri := c.Request.URL.Path
 		if uri == "/" || uri == "/index.html" {
-			c.Redirect(http.StatusFound, "/resources/")
+			c.Redirect(http.StatusFound, resourcesPrefix)
 			c.Abort()
 			return
 		}
-		if fs.Exists(urlPrefix, c.Request.URL.Path) {
+		if fs.Exists(resourcesPrefix, c.Request.URL.Path) {
 			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
 		}

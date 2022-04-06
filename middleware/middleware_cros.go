@@ -26,10 +26,12 @@ const (
 	CROSMiddleOrder      = 10
 )
 
-type MiddlewareCROS struct{}
+type MiddlewareCROS struct {
+	Conf config.TypedConfig `@siu:"name='environment',default='type'"`
+}
 
 func (p *MiddlewareCROS) Condition() bool {
-	if v, ok := config.GetBool(CROSMiddleDisableKey); ok && v {
+	if v, ok := p.Conf.GetBool(CROSMiddleDisableKey); ok && v {
 		return false
 	}
 	return true

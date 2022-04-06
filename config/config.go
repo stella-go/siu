@@ -16,12 +16,12 @@ package config
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/stella-go/siu/common"
 	"gopkg.in/yaml.v2"
 )
 
@@ -61,7 +61,7 @@ func init() {
 			continue
 		}
 		maps = append(maps, m)
-		log.Printf("Load configuration file: %s success\n", file)
+		common.INFO("Load configuration file: %s success", file)
 	}
 	env = &environment{&names, &maps}
 }
@@ -84,12 +84,12 @@ func LoadConfig(files ...string) {
 		bts, err := ioutil.ReadFile(file)
 		if err != nil {
 			maps = append(maps, m)
-			log.Printf("Failed to read configuration file: %s, with error %v\n", file, err)
+			common.ERROR("Failed to read configuration file: %s, with error %v", file, err)
 			continue
 		}
 		err = yaml.Unmarshal(bts, &m)
 		if err != nil {
-			log.Printf("Failed to unmarshal configuration file: %s, with error %v\n", file, err)
+			common.ERROR("Failed to unmarshal configuration file: %s, with error %v", file, err)
 			maps = append(maps, m)
 			continue
 		}
@@ -139,12 +139,12 @@ func (p *environment) GetInt(key string) (int, bool) {
 	case string:
 		intValue, err := strconv.Atoi(value)
 		if err != nil {
-			log.Printf("Failed to get configuration: %s=%s\n", key, value)
+			common.ERROR("Failed to get configuration: %s=%s", key, value)
 			return 0, false
 		}
 		return intValue, true
 	default:
-		log.Printf("Failed to get configuration: %s=%v\n", key, value)
+		common.ERROR("Failed to get configuration: %s=%v", key, value)
 		return 0, false
 	}
 }
@@ -160,7 +160,7 @@ func (p *environment) GetString(key string) (string, bool) {
 	case int:
 		return strconv.Itoa(value), true
 	default:
-		log.Printf("Failed to get configuration: %s=%v\n", key, value)
+		common.ERROR("Failed to get configuration: %s=%v\n", key, value)
 		return "", false
 	}
 }
@@ -180,17 +180,17 @@ func (p *environment) GetBool(key string) (bool, bool) {
 		if value == 1 {
 			return true, true
 		}
-		log.Printf("Failed to get configuration: %s=%d\n", key, value)
+		common.ERROR("Failed to get configuration: %s=%d\n", key, value)
 		return false, false
 	case string:
 		boolValue, err := strconv.ParseBool(value)
 		if err != nil {
-			log.Printf("Failed to get configuration: %s=%s\n", key, value)
+			common.ERROR("Failed to get configuration: %s=%s\n", key, value)
 			return false, false
 		}
 		return boolValue, true
 	default:
-		log.Printf("Failed to get configuration: %s=%s\n", key, value)
+		common.ERROR("Failed to get configuration: %s=%s\n", key, value)
 		return false, false
 	}
 }
@@ -261,34 +261,112 @@ func get(config interface{}, key string) (interface{}, bool) {
 	}
 }
 
-func Get(key string) (interface{}, bool) {
+type Config interface {
+	Get(key string) (interface{}, bool)
+	GetOr(key string, defaultValue interface{}) interface{}
+}
+
+type TypedConfig interface {
+	Config
+	GetInt(key string) (int, bool)
+	GetBool(key string) (bool, bool)
+	GetString(key string) (string, bool)
+	GetIntOr(key string, defaultValue int) int
+	GetBoolOr(key string, defaultValue bool) bool
+	GetStringOr(key string, defaultValue string) string
+}
+
+type ConfigurationEnvironment struct{}
+
+func (p *ConfigurationEnvironment) Get(key string) (interface{}, bool) {
 	return env.Get(key)
 }
 
-func GetInt(key string) (int, bool) {
-	return env.GetInt(key)
-}
-
-func GetString(key string) (string, bool) {
-	return env.GetString(key)
-}
-
-func GetBool(key string) (bool, bool) {
-	return env.GetBool(key)
-}
-
-func GetOr(key string, defaultValue interface{}) interface{} {
+func (p *ConfigurationEnvironment) GetOr(key string, defaultValue interface{}) interface{} {
 	return env.GetOr(key, defaultValue)
 }
 
-func GetIntOr(key string, defaultValue int) int {
+func (p *ConfigurationEnvironment) GetInt(key string) (int, bool) {
+	return env.GetInt(key)
+}
+
+func (p *ConfigurationEnvironment) GetString(key string) (string, bool) {
+	return env.GetString(key)
+}
+
+func (p *ConfigurationEnvironment) GetBool(key string) (bool, bool) {
+	return env.GetBool(key)
+}
+
+func (p *ConfigurationEnvironment) GetIntOr(key string, defaultValue int) int {
 	return env.GetIntOr(key, defaultValue)
 }
 
-func GetBoolOr(key string, defaultValue bool) bool {
+func (p *ConfigurationEnvironment) GetBoolOr(key string, defaultValue bool) bool {
 	return env.GetBoolOr(key, defaultValue)
 }
 
-func GetStringOr(key string, defaultValue string) string {
+func (p *ConfigurationEnvironment) GetStringOr(key string, defaultValue string) string {
 	return env.GetStringOr(key, defaultValue)
+}
+
+type Decipherer interface {
+	Decrypt(string) (string, error)
+}
+
+type EnciphermentEnvironment struct {
+	Cipher Decipherer
+}
+
+func (p *EnciphermentEnvironment) Get(key string) (interface{}, bool) {
+	return env.Get(key)
+}
+
+func (p *EnciphermentEnvironment) GetOr(key string, defaultValue interface{}) interface{} {
+	return env.GetOr(key, defaultValue)
+}
+
+func (p *EnciphermentEnvironment) GetInt(key string) (int, bool) {
+	return env.GetInt(key)
+}
+
+func (p *EnciphermentEnvironment) GetString(key string) (string, bool) {
+	if p.Cipher == nil {
+		return env.GetString(key)
+	}
+	if value, ok := env.GetString(key); ok {
+		if srcVal, err := p.Cipher.Decrypt(value); err != nil {
+			common.ERROR("Failed to decrypt configuration: %s=%s", key, value)
+			return "", false
+		} else {
+			return srcVal, ok
+		}
+	} else {
+		return value, ok
+	}
+}
+
+func (p *EnciphermentEnvironment) GetBool(key string) (bool, bool) {
+	return env.GetBool(key)
+}
+
+func (p *EnciphermentEnvironment) GetIntOr(key string, defaultValue int) int {
+	return env.GetIntOr(key, defaultValue)
+}
+
+func (p *EnciphermentEnvironment) GetBoolOr(key string, defaultValue bool) bool {
+	return env.GetBoolOr(key, defaultValue)
+}
+
+func (p *EnciphermentEnvironment) GetStringOr(key string, defaultValue string) string {
+	if p.Cipher == nil {
+		return env.GetStringOr(key, defaultValue)
+	}
+	value := env.GetStringOr(key, defaultValue)
+	if srcVal, err := p.Cipher.Decrypt(value); err != nil {
+		common.ERROR("Failed to decrypt configuration: %s=%s", key, value)
+		return defaultValue
+	} else {
+		return srcVal
+	}
 }

@@ -17,6 +17,7 @@ package autoconfig
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -24,29 +25,56 @@ import (
 	"github.com/stella-go/siu/config"
 )
 
+/*
+	if !ok {
+		return nil, fmt.Errorf("reids address can not be empty")
+	}
+	password := conf.GetStringOr(prefix+".password", "")
+	db := conf.GetIntOr(prefix+".db", 0)
+	poolSize := conf.GetIntOr(prefix+".poolSize", 4)
+	minIdle := conf.GetIntOr(prefix+".maxIdle", 1)
+	dialTimeout := conf.GetIntOr(prefix+".dialTimeout", 5000)
+	readTimeout := conf.GetIntOr(prefix+".readTimeout", 5000)
+	writeTimeout := conf.GetIntOr(prefix+".writeTimeout", 5000)
+*/
 const (
 	RedisKey             = "redis"
+	RedisDisableKey      = RedisKey + ".disable"
+	RedisAddrKey         = RedisKey + ".addr"
+	RedisPasswordKey     = RedisKey + ".password"
+	RedisDBKey           = RedisKey + ".db"
+	RedisPoolSizeKey     = RedisKey + ".poolSize"
+	RedisMaxIdleKey      = RedisKey + ".maxIdle"
+	RedisDialTimeoutKey  = RedisKey + ".dialTimeout"
+	RedisReadTimeoutKey  = RedisKey + ".readTimeout"
+	RedisWriteTimeoutKey = RedisKey + ".writeTimeout"
 	RedisDatasourceOrder = 30
 )
 
 type AutoRedis struct {
+	Conf          config.TypedConfig `@siu:"name='environment',default='type'"`
 	client        *redis.Client
 	clusterClient *redis.ClusterClient
 }
 
-func (*AutoRedis) Condition() bool {
-	_, ok := config.Get(RedisKey)
-	return ok
+func (p *AutoRedis) Condition() bool {
+	_, ok1 := p.Conf.Get(RedisKey)
+	v, ok2 := p.Conf.GetBool(RedisDisableKey)
+
+	if ok2 && v {
+		return false
+	}
+	return ok1
 }
 
 func (p *AutoRedis) OnStart() error {
-	addrStr, ok := config.GetString(RedisKey + ".addr")
+	addrStr, ok := p.Conf.GetString(RedisKey + ".addr")
 	if !ok {
 		return nil
 	}
 	addrs := strings.Split(addrStr, ",")
 	if len(addrs) > 1 {
-		clusterClient, err := createClusterRedis(RedisKey)
+		clusterClient, err := createClusterRedis(p.Conf, RedisKey)
 		if err != nil {
 			return err
 		}
@@ -54,7 +82,7 @@ func (p *AutoRedis) OnStart() error {
 			p.clusterClient = clusterClient
 		}
 	} else {
-		client, err := createRedis(RedisKey)
+		client, err := createRedis(p.Conf, RedisKey)
 		if err != nil {
 			return err
 		}
@@ -63,66 +91,6 @@ func (p *AutoRedis) OnStart() error {
 		}
 	}
 	return nil
-}
-
-func createRedis(prefix string) (*redis.Client, error) {
-	addr, ok := config.GetString(prefix + ".addr")
-	if !ok {
-		return nil, fmt.Errorf("reids address can not be empty")
-	}
-	password := config.GetStringOr(prefix+".password", "")
-	db := config.GetIntOr(prefix+".db", 0)
-	poolSize := config.GetIntOr(prefix+".poolSize", 4)
-	minIdle := config.GetIntOr(prefix+".maxIdle", 1)
-	dialTimeout := config.GetIntOr(prefix+".dialTimeout", 5000)
-	readTimeout := config.GetIntOr(prefix+".readTimeout", 5000)
-	writeTimeout := config.GetIntOr(prefix+".writeTimeout", 5000)
-	client := redis.NewClient(&redis.Options{
-		Addr:         addr,
-		Password:     password,
-		DB:           db,
-		PoolSize:     poolSize,
-		MinIdleConns: minIdle,
-		DialTimeout:  time.Duration(dialTimeout) * time.Millisecond,
-		ReadTimeout:  time.Duration(readTimeout) * time.Millisecond,
-		WriteTimeout: time.Duration(writeTimeout) * time.Millisecond,
-	})
-	ctx := context.Background()
-	if _, err := client.Ping(ctx).Result(); err != nil {
-		return nil, err
-	} else {
-		return client, nil
-	}
-}
-
-func createClusterRedis(prefix string) (*redis.ClusterClient, error) {
-	addrStr, ok := config.GetString(prefix + ".addr")
-	if !ok {
-		return nil, fmt.Errorf("reids address can not be empty")
-	}
-	addrs := strings.Split(addrStr, ",")
-	password := config.GetStringOr(prefix+".password", "")
-	poolSize := config.GetIntOr(prefix+".poolSize", 4)
-	minIdle := config.GetIntOr(prefix+".maxIdle", 1)
-	dialTimeout := config.GetIntOr(prefix+".dialTimeout", 5000)
-	readTimeout := config.GetIntOr(prefix+".readTimeout", 5000)
-	writeTimeout := config.GetIntOr(prefix+".writeTimeout", 5000)
-
-	clusterClient := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:        addrs,
-		Password:     password,
-		PoolSize:     poolSize,
-		MinIdleConns: minIdle,
-		DialTimeout:  time.Duration(dialTimeout) * time.Millisecond,
-		ReadTimeout:  time.Duration(readTimeout) * time.Millisecond,
-		WriteTimeout: time.Duration(writeTimeout) * time.Millisecond,
-	})
-	ctx := context.Background()
-	if _, err := clusterClient.Ping(ctx).Result(); err != nil {
-		return nil, err
-	} else {
-		return clusterClient, nil
-	}
 }
 
 func (p *AutoRedis) OnStop() error {
@@ -143,12 +111,91 @@ func (*AutoRedis) Name() string {
 	return RedisKey
 }
 
-func (p *AutoRedis) Get() interface{} {
+func (p *AutoRedis) Named() map[string]interface{} {
 	if p.client != nil {
-		return p.client
+		return map[string]interface{}{
+			RedisKey: p.client,
+		}
 	}
 	if p.clusterClient != nil {
-		return p.clusterClient
+		return map[string]interface{}{
+			RedisKey: p.clusterClient,
+		}
 	}
 	return nil
+}
+
+func (p *AutoRedis) Typed() map[reflect.Type]interface{} {
+	refType := reflect.TypeOf((*redis.Cmdable)(nil)).Elem()
+	if p.client != nil {
+		return map[reflect.Type]interface{}{
+			refType: p.client,
+		}
+	}
+	if p.clusterClient != nil {
+		return map[reflect.Type]interface{}{
+			refType: p.clusterClient,
+		}
+	}
+	return nil
+}
+
+func createRedis(conf config.TypedConfig, prefix string) (*redis.Client, error) {
+	addr, ok := conf.GetString(RedisAddrKey)
+	if !ok {
+		return nil, fmt.Errorf("reids address can not be empty")
+	}
+	password := conf.GetStringOr(RedisPasswordKey, "")
+	db := conf.GetIntOr(RedisDBKey, 0)
+	poolSize := conf.GetIntOr(RedisPoolSizeKey, 4)
+	minIdle := conf.GetIntOr(RedisMaxIdleKey, 1)
+	dialTimeout := conf.GetIntOr(RedisDialTimeoutKey, 5000)
+	readTimeout := conf.GetIntOr(RedisReadTimeoutKey, 5000)
+	writeTimeout := conf.GetIntOr(RedisWriteTimeoutKey, 5000)
+	client := redis.NewClient(&redis.Options{
+		Addr:         addr,
+		Password:     password,
+		DB:           db,
+		PoolSize:     poolSize,
+		MinIdleConns: minIdle,
+		DialTimeout:  time.Duration(dialTimeout) * time.Millisecond,
+		ReadTimeout:  time.Duration(readTimeout) * time.Millisecond,
+		WriteTimeout: time.Duration(writeTimeout) * time.Millisecond,
+	})
+	ctx := context.Background()
+	if _, err := client.Ping(ctx).Result(); err != nil {
+		return nil, err
+	} else {
+		return client, nil
+	}
+}
+
+func createClusterRedis(conf config.TypedConfig, prefix string) (*redis.ClusterClient, error) {
+	addrStr, ok := conf.GetString(RedisAddrKey)
+	if !ok {
+		return nil, fmt.Errorf("reids address can not be empty")
+	}
+	addrs := strings.Split(addrStr, ",")
+	password := conf.GetStringOr(RedisPasswordKey, "")
+	poolSize := conf.GetIntOr(RedisPoolSizeKey, 4)
+	minIdle := conf.GetIntOr(RedisMaxIdleKey, 1)
+	dialTimeout := conf.GetIntOr(RedisDialTimeoutKey, 5000)
+	readTimeout := conf.GetIntOr(RedisReadTimeoutKey, 5000)
+	writeTimeout := conf.GetIntOr(RedisWriteTimeoutKey, 5000)
+
+	clusterClient := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:        addrs,
+		Password:     password,
+		PoolSize:     poolSize,
+		MinIdleConns: minIdle,
+		DialTimeout:  time.Duration(dialTimeout) * time.Millisecond,
+		ReadTimeout:  time.Duration(readTimeout) * time.Millisecond,
+		WriteTimeout: time.Duration(writeTimeout) * time.Millisecond,
+	})
+	ctx := context.Background()
+	if _, err := clusterClient.Ping(ctx).Result(); err != nil {
+		return nil, err
+	} else {
+		return clusterClient, nil
+	}
 }
