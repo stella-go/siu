@@ -88,8 +88,6 @@ var logUse = ctx.EnvGetBoolOr(LoggerUseEnvKey, true)
 
 func init() {
 	initLogger()
-	banner()
-	setDefault()
 }
 
 func initLogger() {
@@ -325,6 +323,8 @@ func (c *context) Server() *gin.Engine {
 }
 
 func (c *context) Run() {
+	banner()
+	setDefault()
 	s := autoconfig.AutoConfigSlice(ctx.auto)
 	sort.Sort(s)
 
