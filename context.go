@@ -81,7 +81,6 @@ var ctx *context = &context{
 	middleware: make([]middleware.OrderedMiddleware, 0),
 	ctx:        make(map[string]interface{}),
 	routers:    make([]Router, 0),
-	server:     gin.New(),
 }
 
 var logLevel = logger.Parse(ctx.EnvGetStringOr(LoggerLevelEnvKey, "info"))
@@ -363,6 +362,7 @@ func (c *context) Run() {
 func xmain() error {
 	mode := ctx.EnvGetStringOr("server.mode", "release")
 	gin.SetMode(mode)
+	ctx.server = gin.New()
 	server := ctx.server
 	server.SetTrustedProxies(nil)
 	m := middleware.OrderedMiddlewareSlice(ctx.middleware)
