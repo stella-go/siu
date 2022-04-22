@@ -23,8 +23,6 @@ import (
 	"github.com/stella-go/siu/common"
 )
 
-const _LOG_HEADER = "[SIU]"
-
 var (
 	named = &sync.Map{}
 	typed = &sync.Map{}
@@ -44,7 +42,7 @@ type ValueResolver interface {
 func RegisterTyped(refType reflect.Type, obj interface{}) error {
 	if _, ok := typed.Load(refType); ok {
 		common.ERROR("Typed object %s is already registered", refType)
-		return fmt.Errorf("Typed object %s is already registered", refType)
+		return fmt.Errorf("typed object %s is already registered", refType)
 	}
 	typed.Store(refType, reflect.ValueOf(obj))
 	common.DEBUG("Typed object %s registered", refType)
@@ -54,7 +52,7 @@ func RegisterTyped(refType reflect.Type, obj interface{}) error {
 func RegisterNamed(name string, obj interface{}) error {
 	if _, ok := named.Load(name); ok {
 		common.ERROR("Named object \"%s\" is already registered", name)
-		return fmt.Errorf("Named object \"%s\" is already registered", name)
+		return fmt.Errorf("named object \"%s\" is already registered", name)
 	}
 	named.Store(name, reflect.ValueOf(obj))
 	common.DEBUG("Named object \"%s\" registered", name)
@@ -73,7 +71,7 @@ func Inject(r ValueResolver, obj interface{}) error {
 	prefType := reflect.TypeOf(obj)
 	prefValue := reflect.ValueOf(obj)
 	if prefType.Kind() != reflect.Ptr {
-		return fmt.Errorf("The object to be injected must be a pointer")
+		return fmt.Errorf("the object to be injected must be a pointer")
 	}
 	refType := prefType.Elem()
 	refValue := prefValue.Elem()
@@ -114,18 +112,14 @@ func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) err
 		return fmt.Errorf("field %s can not be set", field.Name)
 	}
 	if isValueType(field.Type) {
-		valueTag, ok := tagMap["value"]
-		if ok && strings.HasPrefix(valueTag, "${") && strings.HasSuffix(valueTag, "}") {
-			value, err := resolveValue(r, valueTag)
-			if err != nil {
-				return err
-			}
-			convertValue := reflect.ValueOf(value).Convert(field.Type)
-			val.Set(convertValue)
-		} else {
-			convertValue := reflect.ValueOf(valueTag).Convert(field.Type)
-			val.Set(convertValue)
+		value, zero, err := resolveValue(tagMap, r, field.Type)
+		if err != nil {
+			return err
 		}
+		if zero {
+			return nil
+		}
+		val.Set(value)
 	} else {
 		switch field.Type.Kind() {
 		case reflect.Interface:
@@ -137,12 +131,6 @@ func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) err
 				return nil
 			}
 			val.Set(value)
-		case reflect.Struct:
-			value, _, err := resolveStruct(tagMap, r, field.Type)
-			if err != nil {
-				return err
-			}
-			val.Set(value)
 		case reflect.Ptr:
 			value, zero, err := resolvePtr(tagMap, r, field.Type)
 			if err != nil {
@@ -150,6 +138,12 @@ func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) err
 			}
 			if zero {
 				return nil
+			}
+			val.Set(value)
+		case reflect.Struct:
+			value, _, err := resolveStruct(tagMap, r, field.Type)
+			if err != nil {
+				return err
 			}
 			val.Set(value)
 		default:
@@ -178,18 +172,14 @@ func resolveInterface(tagMap map[string]string, r ValueResolver, typ reflect.Typ
 	if v, ok := typed.Load(typ); ok {
 		common.DEBUG("Found interface %s with type \"%s\"", typ, typ)
 		return v.(reflect.Value), false, nil
+	} else {
+		if defaultValue, ok := tagMap["default"]; ok && defaultValue == "zero" {
+			common.DEBUG("Not found interface %s with type %s, default is zero", typ, typ)
+			return reflect.Value{}, true, nil
+		}
 	}
 	common.ERROR("Not found interface %s", typ)
-	return reflect.Value{}, true, fmt.Errorf("interface type %s not found", typ.Name())
-}
-
-func resolveStruct(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
-	value, err := create(r, typ)
-	if err != nil {
-		return reflect.Value{}, true, nil
-	}
-	common.DEBUG("Create object %s", typ)
-	return value, false, nil
+	return reflect.Value{}, true, fmt.Errorf("interface type %s not found", typ)
 }
 
 func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
@@ -215,6 +205,11 @@ func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type) (re
 	if v, ok := typed.Load(typ); ok {
 		common.DEBUG("Found object %s with type %s", typ, typ)
 		return v.(reflect.Value), false, nil
+	} else {
+		if defaultValue, ok := tagMap["default"]; ok && defaultValue == "zero" {
+			common.DEBUG("Not found object %s with type %s, default is zero", typ, typ)
+			return reflect.Value{}, true, nil
+		}
 	}
 	value, err := create(r, typ)
 	if err != nil {
@@ -225,6 +220,15 @@ func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type) (re
 		named.Store(name, value)
 	}
 	typed.Store(typ, value)
+	return value, false, nil
+}
+
+func resolveStruct(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
+	value, err := create(r, typ)
+	if err != nil {
+		return reflect.Value{}, true, nil
+	}
+	common.DEBUG("Create object %s", typ)
 	return value, false, nil
 }
 
@@ -267,22 +271,50 @@ func isValueType(t reflect.Type) bool {
 		return false
 	}
 }
-
-func resolveValue(r ValueResolver, placeholder string) (interface{}, error) {
-	key := placeholder[2 : len(placeholder)-1]
-	if splits := strings.Split(key, ":"); len(splits) > 1 {
-		key, defaultValue := splits[0], splits[1]
-		if v, ok := r.Resolve(key); ok {
-			return v, nil
+func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
+	if valueTag, ok := tagMap["value"]; ok {
+		if strings.HasPrefix(valueTag, "${") && strings.HasSuffix(valueTag, "}") {
+			placeholder := valueTag[2 : len(valueTag)-1]
+			if placeholder == "" {
+				return resolveValueWithDefault(tagMap, r, typ)
+			}
+			if index := strings.Index(placeholder, ":"); index != -1 {
+				key, defaultValue := placeholder[0:index], placeholder[index+1:]
+				if value, ok := r.Resolve(key); ok {
+					convertValue := reflect.ValueOf(value).Convert(typ)
+					common.DEBUG("Found value type %s with key \"%s\": \"%s\"", typ, valueTag, value)
+					return convertValue, convertValue.IsZero(), nil
+				} else {
+					convertValue := reflect.ValueOf(defaultValue).Convert(typ)
+					common.DEBUG("Not found value type %s with key \"%s\", default is \"%s\"", typ, valueTag, defaultValue)
+					return convertValue, convertValue.IsZero(), nil
+				}
+			} else {
+				if value, ok := r.Resolve(placeholder); ok {
+					convertValue := reflect.ValueOf(value).Convert(typ)
+					common.DEBUG("Found value type %s with key \"%s\": \"%s\"", typ, valueTag, value)
+					return convertValue, convertValue.IsZero(), nil
+				} else {
+					return resolveValueWithDefault(tagMap, r, typ)
+				}
+			}
 		} else {
-			return defaultValue, nil
+			convertValue := reflect.ValueOf(valueTag).Convert(typ)
+			common.DEBUG("Value type %s with key \"%s\", the key is not a placeholder, use the value: \"%s\"", typ, valueTag, valueTag)
+			return convertValue, convertValue.IsZero(), nil
 		}
-	}
-	if v, ok := r.Resolve(key); ok {
-		return v, nil
 	} else {
-		return nil, fmt.Errorf("%s not found", placeholder)
+		return resolveValueWithDefault(tagMap, r, typ)
 	}
+}
+
+func resolveValueWithDefault(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
+	if defaultValue, ok := tagMap["default"]; ok {
+		convertValue := reflect.ValueOf(defaultValue).Convert(typ)
+		common.DEBUG("Not found value type %s with key \"%s\", default is \"%s\"", typ, tagMap["value"], defaultValue)
+		return convertValue, convertValue.IsZero(), nil
+	}
+	return reflect.Value{}, true, fmt.Errorf("value type %s with key \"%s\" not found, default is not set", typ, tagMap["value"])
 }
 
 func extractTag(structTag reflect.StructTag) (map[string]string, error) {

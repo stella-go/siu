@@ -2,8 +2,10 @@ package inject
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
+
+	"github.com/stella-go/logger"
+	"github.com/stella-go/siu/common"
 )
 
 type SS struct {
@@ -51,7 +53,122 @@ func TestInject(t *testing.T) {
 	fmt.Println(s)
 }
 
-func TestInterfaceTypeof(t *testing.T) {
-	s := reflect.TypeOf((*Initializable)(nil)).Elem()
-	fmt.Println(s)
+type Resolver struct{}
+
+func (r *Resolver) Resolve(key string) (interface{}, bool) {
+	m := map[string]string{
+		"a.b.c": "123",
+	}
+	v, ok := m[key]
+	return v, ok
+}
+
+func TestValue(t *testing.T) {
+	common.SetLevel(logger.DebugLevel)
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:"value='${a.b.c}'"`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.S != "123" {
+			t.FailNow()
+		}
+	}
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:"value='${abc}'"`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err == nil {
+			t.FailNow()
+		}
+	}
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:"value='${abc:999}'"`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.S != "999" {
+			t.FailNow()
+		}
+	}
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:"value='${abc}',default='999'"`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.S != "999" {
+			t.FailNow()
+		}
+	}
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:"default='999'"`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.S != "999" {
+			t.FailNow()
+		}
+	}
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:"value='${}',default='999'"`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.S != "999" {
+			t.FailNow()
+		}
+	}
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:""`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err == nil {
+			t.FailNow()
+		}
+	}
+	{
+		r := &Resolver{}
+		type St struct {
+			S string `@siu:"value='${abc:666}',default='999'"`
+		}
+		st := &St{}
+		err := Inject(r, st)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.S != "666" {
+			t.FailNow()
+		}
+	}
 }
