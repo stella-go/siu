@@ -5,6 +5,7 @@ siu `/sjuː/ meaning very very fast` is an secondary packaging of the Gin Web Fr
 Siu quickly configures startup components through configuration files, such as rolling log, integrating component such as mysql, redis, zookeeper, CROS configuration, and support for history routing web applications. And also keeps open for extensions.
 
 **Incompatibility Update**
+
 Since v1.1.0, The Inversion of Control (IoC) feature was introduced. The struct field tag was used to inject dependencies and attributes, and the functions of siu for obtaining dependencies and attributes manually was removed.
 
 ## Installation
@@ -53,8 +54,9 @@ type MiddlewareRouter interface {
 	Router
 	Middleware() []gin.HandlerFunc
 }
-If the registered route is an implementation of `MiddlewareRouter`, the middlewares will be applied to the routing group.
 ```
+If the registered route is an implementation of `MiddlewareRouter`, the middlewares will be applied to the routing group.
+
 ## Configuration File
 siu will load the configuration files in the following order:
 1. Environment variable STELLA_CONFIG_FILES
@@ -62,12 +64,13 @@ siu will load the configuration files in the following order:
 3. config/application.yml
 **NOTICE**: If the same configuration item exists in different configuration files, the configuration loaded first will take effect.
 
+Obtaining a configuration item:
 ```go
 type Service struct {
 	Content string             `@siu:"value='${my.system.content:defaultValue}'"`
 }
 ```
-or inject instances of the environment configuration , the interface `config.TypedConfig`
+or inject instances of the environment configuration, the interface `config.TypedConfig`
 ```go
 type Service struct {
 	Conf    config.TypedConfig `@siu:"name='environment',default='type'"`
@@ -271,9 +274,9 @@ All struct pointers registered in siu will perform dependency injection. All fie
     // This will look for the object of name "bar" and cause panic if it is not found
     Bau      *Bar              `@siu:"name='bar'"`
     // This will look for the object of name "bar" and set to `nil` if it is not found
-    Baw      *Bar              `@siu:"name='bar',default='zero'"`
+    Bav      *Bar              `@siu:"name='bar',default='zero'"`
     // This will look for the object of name "bar", and then look for the object type `*Bar`
     // If neither is found, an object of type type will be created and its name and type will be stored for use in the next search
-    Bav      *Bar              `@siu:"name='bar',default='type'"`
+    Baw      *Bar              `@siu:"name='bar',default='type'"`
   }
   ```
