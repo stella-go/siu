@@ -59,6 +59,7 @@ func TestRun(t *testing.T) {
 	os.Setenv("STELLA_LOGGER_LEVEL", "debug")
 	os.Setenv("STELLA_ZOOKEEPER", "zookeeperxxx")
 	os.Setenv("STELLA_ZOOKEEPER_SERVERS", "127.x0x.0.1:x21x81")
+	os.Setenv("STELLA_MIDDLEWARE_CROS_DISABLE", "true")
 	siu.Register(&R{})
 	siu.Use(&S{})
 	siu.Run()

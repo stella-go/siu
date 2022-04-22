@@ -329,6 +329,8 @@ func (c *context) Run() {
 					panic(err)
 				}
 			}
+		} else {
+			common.DEBUG("%s is disabled", a.Name())
 		}
 	}
 
@@ -355,6 +357,8 @@ func (c *context) Run() {
 		}
 		if m.Condition() {
 			c.server.Use(m.Function())
+		} else {
+			common.DEBUG("%s is disabled", reflect.TypeOf(m))
 		}
 	}
 	for _, router := range c.routers {
