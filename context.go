@@ -125,6 +125,7 @@ type context struct {
 	environment config.TypedConfig
 	logger      Logger
 
+	registers  []InjectRegister
 	auto       []autoconfig.AutoFactory
 	middleware []middleware.OrderedMiddleware
 	routers    []Router
@@ -135,7 +136,7 @@ type context struct {
 }
 
 func newContext(environment config.TypedConfig, contextLogger Logger, server *gin.Engine) *context {
-	ctx := &context{environment, contextLogger, make([]autoconfig.AutoFactory, 0), make([]middleware.OrderedMiddleware, 0), make([]Router, 0), &sync.Map{}, server}
+	ctx := &context{environment, contextLogger, make([]InjectRegister, 0), make([]autoconfig.AutoFactory, 0), make([]middleware.OrderedMiddleware, 0), make([]Router, 0), &sync.Map{}, server}
 	if leveledLogger, ok := contextLogger.(LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())
 	}
@@ -217,6 +218,10 @@ func (c *context) ERROR(format string, arr ...interface{}) {
 	c.logger.ERROR(format, arr...)
 }
 
+func (c *context) Register(registers ...InjectRegister) {
+	c.registers = append(c.registers, registers...)
+}
+
 func (c *context) AutoFactory(auto ...autoconfig.AutoFactory) {
 	c.auto = append(c.auto, auto...)
 }
@@ -246,6 +251,21 @@ func (r *resolver) Resolve(key string) (interface{}, bool) {
 }
 
 func (c *context) register() {
+	for _, register := range c.registers {
+		for k, v := range register.Named() {
+			err := inject.RegisterNamed(k, v)
+			if err != nil {
+				panic(err)
+			}
+		}
+		for k, v := range register.Typed() {
+			err := inject.RegisterTyped(k, v)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	{
 		if _, ok := inject.GetNamed("environment"); !ok {
 			err := inject.RegisterNamed("environment", c.environment)
@@ -282,9 +302,9 @@ func (c *context) Run() {
 	c.register()
 
 	resolver := &resolver{c.environment}
-	cs := autoconfig.AutoFactorySlice(c.auto)
-	sort.Sort(cs)
-	for _, a := range cs {
+	fs := autoconfig.AutoFactorySlice(c.auto)
+	sort.Sort(fs)
+	for _, a := range fs {
 		err := inject.Inject(resolver, a)
 		if err != nil {
 			panic(err)
@@ -309,19 +329,18 @@ func (c *context) Run() {
 					panic(err)
 				}
 			}
-
 		}
 	}
 
 	defer func() {
-		for i := len(cs) - 1; i >= 0; i-- {
-			if cs[i].Condition() {
-				common.DEBUG("%s is stoping", cs[i].Name())
-				err := cs[i].OnStop()
+		for i := len(fs) - 1; i >= 0; i-- {
+			if fs[i].Condition() {
+				common.DEBUG("%s is stoping", fs[i].Name())
+				err := fs[i].OnStop()
 				if err != nil {
 					common.ERROR("%v", err)
 				}
-				common.DEBUG("%s is stop", cs[i].Name())
+				common.DEBUG("%s is stop", fs[i].Name())
 			}
 		}
 		c.logger.INFO("Server is stop")

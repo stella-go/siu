@@ -15,6 +15,7 @@
 package siu
 
 import (
+	"reflect"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,11 @@ type Logger interface {
 type LeveledLogger interface {
 	Logger
 	Level() logger.Level
+}
+
+type InjectRegister interface {
+	Named() map[string]interface{}
+	Typed() map[reflect.Type]interface{}
 }
 
 type Router interface {
@@ -90,6 +96,11 @@ func WARN(format string, arr ...interface{}) {
 func ERROR(format string, arr ...interface{}) {
 	Default()
 	ctx.ERROR(format, arr...)
+}
+
+func Register(registers ...InjectRegister) {
+	Default()
+	ctx.Register(registers...)
 }
 
 func AutoFactory(auto ...autoconfig.AutoFactory) {
