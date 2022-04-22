@@ -4,6 +4,9 @@ siu `/sjuː/ meaning very very fast` is an secondary packaging of the Gin Web Fr
 
 Siu quickly configures startup components through configuration files, such as rolling log, integrating component such as mysql, redis, zookeeper, CROS configuration, and support for history routing web applications. And also keeps open for extensions.
 
+**Incompatibility Update**
+Since v1.1.0, The Inversion of Control (IoC) feature was introduced. The struct field tag was used to inject dependencies and attributes, and the functions of siu for obtaining dependencies and attributes manually was removed.
+
 ## Installation
 ```bash
 go get -u github.com/stella-go/siu
@@ -44,16 +47,36 @@ type Router interface {
 }
 ```
 and then use `siu.Route(&HelloRoute{})` to register routers.
-The return value of the method is a map, the key of the map needs to meet the format of <method><space><path>, and the value of the map is the handler function.
-
+The return value of the function is a map, the key of the map needs to meet the format `"GET /hello"`, and the value of the map is the handler function.
+```go
+type MiddlewareRouter interface {
+	Router
+	Middleware() []gin.HandlerFunc
+}
+If the registered route is an implementation of `MiddlewareRouter`, the middlewares will be applied to the routing group.
+```
 ## Configuration File
 siu will load the configuration files in the following order:
 1. Environment variable STELLA_CONFIG_FILES
 2. application.yml
 3. config/application.yml
-**NOTICE**: If the same configuration exists in different configuration files, the configuration loaded first will take effect.
+**NOTICE**: If the same configuration item exists in different configuration files, the configuration loaded first will take effect.
 
-Get a custom configuration, use these methods `siu.EnvGetX()` or `siu.EnvGetXOr()`.
+```go
+type Service struct {
+	Content string             `@siu:"value='${my.system.content:defaultValue}'"`
+}
+```
+or inject instances of the environment configuration , the interface `config.TypedConfig`
+```go
+type Service struct {
+	Conf    config.TypedConfig `@siu:"name='environment',default='type'"`
+}
+
+func (p *Service) Handle() {
+	fmt.Println(p.Conf.GetStringOr("my.system.content", "defaultValue"))
+}
+```
 
 ### Server Related Configuration
 ```yml
@@ -87,8 +110,9 @@ logger:
 
 Obtaining a Logger instance:
 ```go
-rootLogger := siu.RootLogger()
-namedLogger := siu.NewLogger(name)
+type Service struct {
+	Logger  siu.Logger         `@siu:"name='logger',default='type'"`
+}
 ```
 
 ### MySQL Related Configuration
@@ -113,7 +137,9 @@ mysql:
 - **mysql.writeTimeout** Write timeout in milliseconds. Default value `30000`.
 Obtaining a MySQL instance:
 ```go
-db,ok := siu.DataSource()
+type Service struct {
+	DB      *sql.DB            `@siu:""`
+}
 ```
 
 To use multiple data sources, configure as follows.
@@ -132,8 +158,10 @@ mysql:
 ```
 Obtaining a MySQL instance:
 ```go
-db1,ok := siu.DataSourceWithName("db1")
-db2,ok := siu.DataSourceWithName("db2")
+type Service struct {
+	DB1     *sql.DB            `@siu:"name='mysql.db1'"`
+	DB2     *sql.DB            `@siu:"name='mysql.db2'"`
+}
 ```
 
 ### Redis Related Configuration
@@ -159,10 +187,9 @@ redis:
 
 Obtaining a Redis instance:
 ```go
-redis,ok := siu.Redis()
-redisCluster,ok := siu.RedisCluster()
-
-cmdable,ok := siu.RedisCmdable()
+type Service struct {
+	Redis   redis.Cmdable      `@siu:""`
+}
 // Cmdable is the common interface of RedisClient and RedisClusterClient
 ```
 
@@ -175,6 +202,13 @@ zookeeper:
 - **zookeeper.servers** zookeeper servers ip:port, if it's a cluster ip1:port1,ip2:port2,ip3:port3.
 - **zookeeper.sessionTimeoutKey** session timeout in milliseconds. Default value `60000`.
 
+Obtaining a Zookeeper instance:
+```go
+type Service struct {
+	Zk      *zk.Conn           `@siu:""`
+}
+```
+
 ## Middleware Related Configuration
 ```yml
 middleware:
@@ -183,7 +217,63 @@ middleware:
 ```
 
 ## Custom Component
-Implement the AutoConfig interface and use `siu.AutoConfig()` to register.
+Implement the AutoFactory interface and use `siu.AutoFactory()` to register.
 
 ## Custom Middleware
 Implement the OrderedMiddleware interface and use `siu.Use()` to register.
+
+## Instructions on Dependency Injection
+All struct pointers registered in siu will perform dependency injection. All fields of struct are scanned by siu, and fields with the `@siu` tag are processed. After all fields are injected, if the struct/pointer implements `Initializable` interface, its `Init` function is executed.
+
+### Tag
+- Inject a configuration item
+  ```go
+  type Service struct {
+    // This will look for the `my.system.content` configuration item and cause panic if it is not found.
+    Content1 string             `@siu:"value='${my.system.content}'"`
+    // This will look for the `my.system.content` configuration item and inject "defaultValue" if it is not found
+    Content2 string             `@siu:"value='${my.system.content:defaultValue}'"`
+    // This will look for the `my.system.content` configuration item and inject "defaultValue" if it is not found
+    Content3 string             `@siu:"value='${my.system.content}',default='defaultValue'"`
+  }
+  ```
+
+  - Injecting a dependency
+  ```go
+  type Foo interface{}
+  type Service struct {
+    // This will look for the object of type `Foo` and cause panic if it is not found
+    Foo      Foo               `@siu:""`
+    // This will look for the object of name "foo" and cause panic if it is not found
+    Fop      Foo               `@siu:"name='foo'"`
+    // This will look for the object of name "foo" and set to `nil` if it is not found
+    Foq      Foo               `@siu:"name='foo',default='zero'"`
+    // This will look for the object of name "foo", and then look for the object type `Foo` and cause panic if it is not found in either
+    For      Foo               `@siu:"name='foo',default='type'"`
+  }
+  ```
+
+  ```go
+  type Bar struct{}
+
+  func (*Bar) Init() {
+    // This function is executed each time siu inject creates an instance of type Bar/*Bar
+    fmt.Println("Bar")
+  }
+
+  type Service struct {
+    // This will create a object of type `Bar`
+    Bar      Bar               `@siu:""`
+    // This will create a private object of type `*Bar`
+    Bas      *Bar              `@siu:"type='private'"`
+    // This will look for the object of type `*Bar` and create if it is not found
+    Bat      *Bar              `@siu:""`
+    // This will look for the object of name "bar" and cause panic if it is not found
+    Bau      *Bar              `@siu:"name='bar'"`
+    // This will look for the object of name "bar" and set to `nil` if it is not found
+    Baw      *Bar              `@siu:"name='bar',default='zero'"`
+    // This will look for the object of name "bar", and then look for the object type `*Bar`
+    // If neither is found, an object of type type will be created and its name and type will be stored for use in the next search
+    Bav      *Bar              `@siu:"name='bar',default='type'"`
+  }
+  ```
