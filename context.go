@@ -65,7 +65,7 @@ type buildinLogger struct {
 }
 
 func newBuildinLogger(logLevel logger.Level, writer io.Writer) *buildinLogger {
-	l := log.New(writer, "", log.LstdFlags|log.Lshortfile)
+	l := log.New(writer, "", log.LstdFlags)
 	return &buildinLogger{l: l, logLevel: logLevel}
 }
 
@@ -77,7 +77,7 @@ func (p *buildinLogger) DEBUG(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Output(2, "DEBUG - "+msg)
+		p.l.Printf("DEBUG - " + msg)
 	}
 }
 
@@ -89,7 +89,7 @@ func (p *buildinLogger) INFO(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		log.Output(2, "INFO  - "+msg)
+		p.l.Printf("INFO  - " + msg)
 	}
 }
 
@@ -101,7 +101,7 @@ func (p *buildinLogger) WARN(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		log.Output(2, "WARN  - "+msg)
+		p.l.Printf("WARN  - " + msg)
 	}
 }
 
@@ -113,7 +113,7 @@ func (p *buildinLogger) ERROR(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		log.Output(2, "ERROR - "+msg)
+		p.l.Printf("ERROR - " + msg)
 	}
 }
 
