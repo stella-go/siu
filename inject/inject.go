@@ -17,6 +17,7 @@ package inject
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -68,6 +69,16 @@ func GetNamed(name string) (interface{}, bool) {
 }
 
 func Inject(r ValueResolver, obj interface{}) error {
+	defer func() {
+		if err := recover(); err != nil {
+			common.ERROR("panic: %v", err)
+			panic(err)
+		}
+	}()
+	return inject(r, obj)
+}
+
+func inject(r ValueResolver, obj interface{}) error {
 	prefType := reflect.TypeOf(obj)
 	prefValue := reflect.ValueOf(obj)
 	if prefType.Kind() != reflect.Ptr {
@@ -101,15 +112,18 @@ func Inject(r ValueResolver, obj interface{}) error {
 }
 
 func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) error {
-	tagMap, err := extractTag(field.Tag)
-	if err != nil {
-		return err
-	}
-	if _, ok := tagMap["tag"]; !ok {
+	tag, ok := field.Tag.Lookup("@siu")
+	if !ok {
 		return nil
 	}
 	if !val.CanSet() {
 		return fmt.Errorf("field %s can not be set", field.Name)
+	}
+	common.DEBUG("Process field %s", field.Name)
+
+	tagMap, err := extractTag(tag)
+	if err != nil {
+		return err
 	}
 	if isValueType(field.Type) {
 		value, zero, err := resolveValue(tagMap, r, field.Type)
@@ -237,7 +251,7 @@ func create(r ValueResolver, typ reflect.Type) (reflect.Value, error) {
 	switch typ.Kind() {
 	case reflect.Struct:
 		pvalue := reflect.New(typ)
-		err := Inject(r, pvalue.Interface())
+		err := inject(r, pvalue.Interface())
 		if err != nil {
 			return value, err
 		}
@@ -245,7 +259,7 @@ func create(r ValueResolver, typ reflect.Type) (reflect.Value, error) {
 		return value, nil
 	case reflect.Ptr:
 		value = reflect.New(typ.Elem())
-		err := Inject(r, value.Interface())
+		err := inject(r, value.Interface())
 		if err != nil {
 			return reflect.Value{}, err
 		}
@@ -255,7 +269,7 @@ func create(r ValueResolver, typ reflect.Type) (reflect.Value, error) {
 		return v.Elem(), nil
 	default:
 		value := reflect.Zero(typ)
-		err := Inject(r, value.Interface())
+		err := inject(r, value.Interface())
 		if err != nil {
 			return reflect.Value{}, err
 		}
@@ -271,6 +285,7 @@ func isValueType(t reflect.Type) bool {
 		return false
 	}
 }
+
 func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
 	if valueTag, ok := tagMap["value"]; ok {
 		if strings.HasPrefix(valueTag, "${") && strings.HasSuffix(valueTag, "}") {
@@ -285,7 +300,10 @@ func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (
 					common.DEBUG("Found value type %s with key \"%s\": \"%v\"", typ, valueTag, value)
 					return convertValue, convertValue.IsZero(), nil
 				} else {
-					convertValue := reflect.ValueOf(defaultValue).Convert(typ)
+					convertValue, err := convertString(defaultValue, typ)
+					if err != nil {
+						return reflect.Value{}, true, err
+					}
 					common.DEBUG("Not found value type %s with key \"%s\", default is \"%v\"", typ, valueTag, defaultValue)
 					return convertValue, convertValue.IsZero(), nil
 				}
@@ -299,7 +317,10 @@ func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (
 				}
 			}
 		} else {
-			convertValue := reflect.ValueOf(valueTag).Convert(typ)
+			convertValue, err := convertString(valueTag, typ)
+			if err != nil {
+				return reflect.Value{}, true, err
+			}
 			common.DEBUG("Value type %s with key \"%s\", the key is not a placeholder, use the value: \"%v\"", typ, valueTag, valueTag)
 			return convertValue, convertValue.IsZero(), nil
 		}
@@ -310,20 +331,56 @@ func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (
 
 func resolveValueWithDefault(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
 	if defaultValue, ok := tagMap["default"]; ok {
-		convertValue := reflect.ValueOf(defaultValue).Convert(typ)
+		convertValue, err := convertString(defaultValue, typ)
+		if err != nil {
+			return reflect.Value{}, true, err
+		}
 		common.DEBUG("Not found value type %s with key \"%s\", default is \"%v\"", typ, tagMap["value"], defaultValue)
 		return convertValue, convertValue.IsZero(), nil
 	}
 	return reflect.Value{}, true, fmt.Errorf("value type %s with key \"%s\" not found, default is not set", typ, tagMap["value"])
 }
 
-func extractTag(structTag reflect.StructTag) (map[string]string, error) {
+func convertString(value string, typ reflect.Type) (reflect.Value, error) {
+	switch typ.Kind() {
+	case reflect.Bool:
+		boolValue, err := strconv.ParseBool(value)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		return reflect.ValueOf(boolValue), nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		intValue, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		return reflect.ValueOf(intValue).Convert(typ), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		uintValue, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		return reflect.ValueOf(uintValue).Convert(typ), nil
+	case reflect.Float32, reflect.Float64:
+		floatValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		return reflect.ValueOf(floatValue).Convert(typ), nil
+	case reflect.Complex64, reflect.Complex128:
+		complexValue, err := strconv.ParseComplex(value, 128)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		return reflect.ValueOf(complexValue).Convert(typ), nil
+	}
+	return reflect.ValueOf(value).Convert(typ), nil
+}
+
+func extractTag(tag string) (map[string]string, error) {
 	// tag example `@siu-inject:"name='abc',value='${a.b.c}',default='type',type='private'"`
 	r := make(map[string]string)
-	tag, ok := structTag.Lookup("@siu")
-	if !ok {
-		return r, nil
-	}
+
 	syntaxErr := fmt.Errorf("@siu inject tag syntax error: %s", tag)
 	r["tag"] = tag
 	for tag != "" {

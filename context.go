@@ -296,6 +296,21 @@ func (c *context) register() {
 			}
 		}
 	}
+	{
+		if _, ok := inject.GetNamed("server"); !ok {
+			err := inject.RegisterNamed("server", c.server)
+			if err != nil {
+				panic(err)
+			}
+		}
+		refType := reflect.TypeOf((*gin.Engine)(nil)).Elem()
+		if _, ok := inject.GetTyped(refType); !ok {
+			err := inject.RegisterTyped(refType, c.server)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 }
 
 func (c *context) Run() {
@@ -377,7 +392,10 @@ func (c *context) Run() {
 		}
 		for name, function := range rs {
 			tokens := strings.Split(name, " ")
-			group.Handle(strings.ToUpper(tokens[0]), tokens[1], function)
+			methods := strings.Split(tokens[0], ",")
+			for _, method := range methods {
+				group.Handle(strings.ToUpper(method), tokens[1], function)
+			}
 		}
 	}
 	ip := c.environment.GetStringOr("server.ip", "0.0.0.0")

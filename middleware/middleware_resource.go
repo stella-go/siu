@@ -41,7 +41,7 @@ func (p *MiddlewareResource) Condition() bool {
 }
 
 func (p *MiddlewareResource) Function() gin.HandlerFunc {
-	resourcesPrefix := p.Conf.GetStringOr(ResourceMiddleDisableKey, ResourceMiddleDefaultPrefix)
+	resourcesPrefix := p.Conf.GetStringOr(ResourceMiddlePrefixKey, ResourceMiddleDefaultPrefix)
 	return Serve(resourcesPrefix, LocalFile("resources", true))
 }
 
