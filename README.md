@@ -22,20 +22,20 @@ import (
 	"github.com/stella-go/siu"
 )
 
-type HelloRoute struct{}
+type HelloRouter struct{}
 
-func (p *HelloRoute) Router() map[string]gin.HandlerFunc {
+func (p *HelloRouter) Router() map[string]gin.HandlerFunc {
 	return map[string]gin.HandlerFunc{
 		"GET /hello": p.Hello,
 	}
 }
 
-func (p *HelloRoute) Hello(c *gin.Context) {
+func (p *HelloRouter) Hello(c *gin.Context) {
 	c.String(200, "Hello.")
 }
 
 func main() {
-	siu.Route(&HelloRoute{})
+	siu.Route(&HelloRouter{})
 	siu.Run()
 }
 ```
@@ -47,7 +47,7 @@ type Router interface {
 	Router() map[string]gin.HandlerFunc
 }
 ```
-and then use `siu.Route(&HelloRoute{})` to register routers.
+Implement this interface and then use `siu.Route(&HelloRouter{})` to register routers.
 The return value of the function is a map, the key of the map needs to meet the format `"GET /hello"`, and the value of the map is the handler function.
 ```go
 type MiddlewareRouter interface {
@@ -62,6 +62,7 @@ siu will load the configuration files in the following order:
 1. Environment variable STELLA_CONFIG_FILES
 2. application.yml
 3. config/application.yml
+
 **NOTICE**: If the same configuration item exists in different configuration files, the configuration loaded first will take effect.
 
 Obtaining a configuration item:
