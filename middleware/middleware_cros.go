@@ -44,7 +44,7 @@ func (p *MiddlewareCROS) Function() gin.HandlerFunc {
 		if origin == "" {
 			origin = "*"
 		}
-		headers := c.GetHeader("Access-Control-Allow-Headers")
+		headers := c.GetHeader("Access-Control-Request-Headers")
 		if headers == "" {
 			headers = "*"
 		}
