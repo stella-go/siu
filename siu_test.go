@@ -3,10 +3,13 @@ package siu_test
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-zookeeper/zk"
@@ -19,7 +22,7 @@ type S struct {
 }
 
 func (p *S) Init() {
-	fmt.Printf("siu test\n")
+	fmt.Printf("siu test init\n")
 }
 
 func (p *S) Condition() bool {
@@ -51,16 +54,35 @@ func (*R) Typed() map[reflect.Type]interface{} {
 	return nil
 }
 
+type Router struct{}
+
+func (*Router) Router() map[string]gin.HandlerFunc {
+	return map[string]gin.HandlerFunc{
+		"GET /hi": func(ctx *gin.Context) {
+			time.Sleep(5 * time.Millisecond)
+			ctx.String(200, "hello")
+		},
+	}
+}
+
 func TestRun(t *testing.T) {
 	go func() {
 		listener, _ := net.Listen("tcp", "127.0.0.1:2181")
 		listener.Accept()
 	}()
+	go func() {
+		time.Sleep(1 * time.Second)
+		http.Get("http://localhost:8080/hi")
+		http.Get("http://localhost:8080/abc")
+		syscall.Kill(os.Getpid(), 15)
+	}()
+	os.Setenv("STELLA_LOGGER_SIU", "false")
 	os.Setenv("STELLA_LOGGER_LEVEL", "debug")
 	os.Setenv("STELLA_ZOOKEEPER", "zookeeperxxx")
 	os.Setenv("STELLA_ZOOKEEPER_SERVERS", "127.x0x.0.1:x21x81")
 	os.Setenv("STELLA_MIDDLEWARE_CROS_DISABLE", "true")
 	siu.Register(&R{})
 	siu.Use(&S{})
+	siu.Route(&Router{})
 	siu.Run()
 }

@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package siu
+package interfaces
 
-const VERSION = "v1.1.3"
+import "github.com/stella-go/logger"
+
+type Logger interface {
+	DEBUG(format string, arr ...interface{})
+	INFO(format string, arr ...interface{})
+	WARN(format string, arr ...interface{})
+	ERROR(format string, arr ...interface{})
+}
+
+type LeveledLogger interface {
+	Logger
+	Level() logger.Level
+}

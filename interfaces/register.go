@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package siu
+package interfaces
 
-const VERSION = "v1.1.3"
+import (
+	"reflect"
+)
+
+type InjectRegister interface {
+	Named() map[string]interface{}
+	Typed() map[reflect.Type]interface{}
+}

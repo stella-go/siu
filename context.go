@@ -33,6 +33,7 @@ import (
 	"github.com/stella-go/siu/common"
 	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/inject"
+	"github.com/stella-go/siu/interfaces"
 	"github.com/stella-go/siu/middleware"
 )
 
@@ -77,7 +78,7 @@ func (p *buildinLogger) DEBUG(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("DEBUG - " + msg)
+		p.l.Printf("DEBUG - [SIU] " + msg)
 	}
 }
 
@@ -89,7 +90,7 @@ func (p *buildinLogger) INFO(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("INFO  - " + msg)
+		p.l.Printf("INFO  - [SIU] " + msg)
 	}
 }
 
@@ -101,7 +102,7 @@ func (p *buildinLogger) WARN(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("WARN  - " + msg)
+		p.l.Printf("WARN  - [SIU] " + msg)
 	}
 }
 
@@ -113,7 +114,7 @@ func (p *buildinLogger) ERROR(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("ERROR - " + msg)
+		p.l.Printf("ERROR - [SIU] " + msg)
 	}
 }
 
@@ -123,21 +124,21 @@ func (p *buildinLogger) Level() logger.Level {
 
 type context struct {
 	environment config.TypedConfig
-	logger      Logger
+	logger      interfaces.Logger
 
-	registers  []InjectRegister
-	auto       []autoconfig.AutoFactory
-	middleware []middleware.OrderedMiddleware
-	routers    []Router
+	registers  []interfaces.InjectRegister
+	auto       []interfaces.AutoFactory
+	middleware []interfaces.OrderedMiddleware
+	routers    []interfaces.Router
 
 	store *sync.Map
 
 	server *gin.Engine
 }
 
-func newContext(environment config.TypedConfig, contextLogger Logger, server *gin.Engine) *context {
-	ctx := &context{environment, contextLogger, make([]InjectRegister, 0), make([]autoconfig.AutoFactory, 0), make([]middleware.OrderedMiddleware, 0), make([]Router, 0), &sync.Map{}, server}
-	if leveledLogger, ok := contextLogger.(LeveledLogger); ok {
+func newContext(environment config.TypedConfig, contextLogger interfaces.Logger, server *gin.Engine) *context {
+	ctx := &context{environment, contextLogger, make([]interfaces.InjectRegister, 0), make([]interfaces.AutoFactory, 0), make([]interfaces.OrderedMiddleware, 0), make([]interfaces.Router, 0), &sync.Map{}, server}
+	if leveledLogger, ok := contextLogger.(interfaces.LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())
 	}
 	ctx.banner()
@@ -165,9 +166,9 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	if err != nil {
 		panic(err)
 	}
-	var contextLogger Logger
+	var contextLogger interfaces.Logger
 	if logUse {
-		contextLogger = logger.NewRootLogger(logLevel, &logger.DefaultFormatter{}, writer).GetLogger("SIU")
+		contextLogger = logger.NewRootLogger(logLevel, &logger.DefaultFormatter{}, writer).GetLogger("[SIU]")
 	} else {
 		contextLogger = newBuildinLogger(logLevel, writer)
 		common.INFO("use buildin logger")
@@ -181,7 +182,7 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	ctx := newContext(environment, contextLogger, server)
 
 	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{})
-	ctx.Use(&middleware.MiddlewareCROS{}, &middleware.MiddlewareResource{})
+	ctx.Use(&middleware.MiddlewareCROS{}, &middleware.MiddlewareResource{}, &middleware.MiddlewareAccess{})
 
 	return ctx
 }
@@ -218,19 +219,19 @@ func (c *context) ERROR(format string, arr ...interface{}) {
 	c.logger.ERROR(format, arr...)
 }
 
-func (c *context) Register(registers ...InjectRegister) {
+func (c *context) Register(registers ...interfaces.InjectRegister) {
 	c.registers = append(c.registers, registers...)
 }
 
-func (c *context) AutoFactory(auto ...autoconfig.AutoFactory) {
+func (c *context) AutoFactory(auto ...interfaces.AutoFactory) {
 	c.auto = append(c.auto, auto...)
 }
 
-func (c *context) Use(middleware ...middleware.OrderedMiddleware) {
+func (c *context) Use(middleware ...interfaces.OrderedMiddleware) {
 	c.middleware = append(c.middleware, middleware...)
 }
 
-func (c *context) Route(router ...Router) {
+func (c *context) Route(router ...interfaces.Router) {
 	c.routers = append(c.routers, router...)
 }
 
@@ -281,6 +282,7 @@ func (c *context) register() {
 			}
 		}
 	}
+
 	{
 		if _, ok := inject.GetNamed("logger"); !ok {
 			err := inject.RegisterNamed("logger", c.logger)
@@ -288,7 +290,7 @@ func (c *context) register() {
 				panic(err)
 			}
 		}
-		refType := reflect.TypeOf((*Logger)(nil)).Elem()
+		refType := reflect.TypeOf((*interfaces.Logger)(nil)).Elem()
 		if _, ok := inject.GetTyped(refType); !ok {
 			err := inject.RegisterTyped(refType, c.logger)
 			if err != nil {
@@ -296,6 +298,7 @@ func (c *context) register() {
 			}
 		}
 	}
+
 	{
 		if _, ok := inject.GetNamed("server"); !ok {
 			err := inject.RegisterNamed("server", c.server)
@@ -317,7 +320,7 @@ func (c *context) Run() {
 	c.register()
 
 	resolver := &resolver{c.environment}
-	fs := autoconfig.AutoFactorySlice(c.auto)
+	fs := interfaces.AutoFactorySlice(c.auto)
 	sort.Sort(fs)
 	for _, a := range fs {
 		err := inject.Inject(resolver, a)
@@ -363,7 +366,7 @@ func (c *context) Run() {
 		c.logger.INFO("Server is stop")
 	}()
 
-	ms := middleware.OrderedMiddlewareSlice(c.middleware)
+	ms := interfaces.OrderedMiddlewareSlice(c.middleware)
 	sort.Sort(ms)
 	for _, m := range ms {
 		err := inject.Inject(resolver, m)
@@ -385,7 +388,7 @@ func (c *context) Run() {
 	for _, router := range c.routers {
 		rs := router.Router()
 		group := c.server.Group("")
-		if mr, ok := router.(MiddlewareRouter); ok {
+		if mr, ok := router.(interfaces.MiddlewareRouter); ok {
 			if ms := mr.Middleware(); ms != nil {
 				group.Use(ms...)
 			}

@@ -12,6 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package siu
+package interfaces
 
-const VERSION = "v1.1.3"
+import (
+	"github.com/gin-gonic/gin"
+)
+
+type Router interface {
+	Router() map[string]gin.HandlerFunc
+}
+
+type MiddlewareRouter interface {
+	Router
+	Middleware() []gin.HandlerFunc
+}

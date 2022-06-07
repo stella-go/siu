@@ -15,41 +15,12 @@
 package siu
 
 import (
-	"reflect"
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stella-go/logger"
-	"github.com/stella-go/siu/autoconfig"
 	"github.com/stella-go/siu/config"
-	"github.com/stella-go/siu/middleware"
+	"github.com/stella-go/siu/interfaces"
 )
-
-type Logger interface {
-	DEBUG(format string, arr ...interface{})
-	INFO(format string, arr ...interface{})
-	WARN(format string, arr ...interface{})
-	ERROR(format string, arr ...interface{})
-}
-
-type LeveledLogger interface {
-	Logger
-	Level() logger.Level
-}
-
-type InjectRegister interface {
-	Named() map[string]interface{}
-	Typed() map[reflect.Type]interface{}
-}
-
-type Router interface {
-	Router() map[string]gin.HandlerFunc
-}
-
-type MiddlewareRouter interface {
-	Router
-	Middleware() []gin.HandlerFunc
-}
 
 var ctx *context
 var once sync.Once
@@ -60,7 +31,7 @@ func LoadConfig(files ...string) {
 	config.LoadConfig(files...)
 }
 
-func New(environment config.TypedConfig, contextLogger Logger, server *gin.Engine) {
+func New(environment config.TypedConfig, contextLogger interfaces.Logger, server *gin.Engine) {
 	once.Do(func() {
 		ctx = newContext(environment, contextLogger, server)
 	})
@@ -98,22 +69,22 @@ func ERROR(format string, arr ...interface{}) {
 	ctx.ERROR(format, arr...)
 }
 
-func Register(registers ...InjectRegister) {
+func Register(registers ...interfaces.InjectRegister) {
 	Default()
 	ctx.Register(registers...)
 }
 
-func AutoFactory(auto ...autoconfig.AutoFactory) {
+func AutoFactory(auto ...interfaces.AutoFactory) {
 	Default()
 	ctx.AutoFactory(auto...)
 }
 
-func Use(middleware ...middleware.OrderedMiddleware) {
+func Use(middleware ...interfaces.OrderedMiddleware) {
 	Default()
 	ctx.Use(middleware...)
 }
 
-func Route(router ...Router) {
+func Route(router ...interfaces.Router) {
 	Default()
 	ctx.Route(router...)
 }
