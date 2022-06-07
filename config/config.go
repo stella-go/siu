@@ -137,12 +137,12 @@ func (p *environment) GetInt(key string) (int, bool) {
 	case int:
 		return value, true
 	case string:
-		intValue, err := strconv.Atoi(value)
+		intValue, err := strconv.ParseInt(value, 0, 0)
 		if err != nil {
-			common.ERROR("Failed to get configuration: %s=%s", key, value)
+			common.ERROR("Failed to get configuration: %s=%s, with error %v", key, value, err)
 			return 0, false
 		}
-		return intValue, true
+		return int(intValue), true
 	default:
 		common.ERROR("Failed to get configuration: %s=%v", key, value)
 		return 0, false
@@ -160,7 +160,7 @@ func (p *environment) GetString(key string) (string, bool) {
 	case int:
 		return strconv.Itoa(value), true
 	default:
-		common.ERROR("Failed to get configuration: %s=%v\n", key, value)
+		common.ERROR("Failed to get configuration: %s=%v", key, value)
 		return "", false
 	}
 }
@@ -180,17 +180,17 @@ func (p *environment) GetBool(key string) (bool, bool) {
 		if value == 1 {
 			return true, true
 		}
-		common.ERROR("Failed to get configuration: %s=%d\n", key, value)
+		common.ERROR("Failed to get configuration: %s=%d", key, value)
 		return false, false
 	case string:
 		boolValue, err := strconv.ParseBool(value)
 		if err != nil {
-			common.ERROR("Failed to get configuration: %s=%s\n", key, value)
+			common.ERROR("Failed to get configuration: %s=%s, with error %v", key, value, err)
 			return false, false
 		}
 		return boolValue, true
 	default:
-		common.ERROR("Failed to get configuration: %s=%s\n", key, value)
+		common.ERROR("Failed to get configuration: %s=%s", key, value)
 		return false, false
 	}
 }
@@ -336,7 +336,7 @@ func (p *EnciphermentEnvironment) GetString(key string) (string, bool) {
 	}
 	if value, ok := env.GetString(key); ok {
 		if srcVal, err := p.Cipher.Decrypt(value); err != nil {
-			common.ERROR("Failed to decrypt configuration: %s=%s", key, value)
+			common.ERROR("Failed to decrypt configuration: %s=%s, with error %v", key, value, err)
 			return "", false
 		} else {
 			return srcVal, ok
@@ -364,7 +364,7 @@ func (p *EnciphermentEnvironment) GetStringOr(key string, defaultValue string) s
 	}
 	value := env.GetStringOr(key, defaultValue)
 	if srcVal, err := p.Cipher.Decrypt(value); err != nil {
-		common.ERROR("Failed to decrypt configuration: %s=%s", key, value)
+		common.ERROR("Failed to decrypt configuration: %s=%s, with error %v", key, value, err)
 		return defaultValue
 	} else {
 		return srcVal

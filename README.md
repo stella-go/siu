@@ -216,8 +216,9 @@ type Service struct {
 ## Middleware Related Configuration
 ```yml
 middleware:
-  cros.disable: false # Sets whether to disable CROS, default false
-  resource.disable: false # Sets whether to disable resources serve, default false
+  cros.disable: false # Set whether to disable CROS, default false
+  resource.disable: false # Set whether to disable resources serve, default false
+  access.disable: false # Set whether to disable access logging, default false
 ```
 
 ## Custom Component
