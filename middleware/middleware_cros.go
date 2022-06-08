@@ -22,12 +22,22 @@ import (
 )
 
 const (
-	CROSMiddleDisableKey = "middleware.cros.disable"
-	CROSMiddleOrder      = 10
+	CROSMiddleDisableKey  = "middleware.cros.disable"
+	CROSMiddleWildcardKey = "middleware.cros.wildcard"
+	CROSMiddleExposedKey  = "middleware.cros.expose"
+	CROSMiddleOrder       = 10
 )
 
 type MiddlewareCROS struct {
-	Conf config.TypedConfig `@siu:"name='environment',default='type'"`
+	Conf     config.TypedConfig `@siu:"name='environment',default='type'"`
+	wildcard bool
+	expose   string
+}
+
+func (p *MiddlewareCROS) Init() {
+	p.wildcard = p.Conf.GetBoolOr(CROSMiddleWildcardKey, true)
+	p.expose = p.Conf.GetStringOr(CROSMiddleExposedKey, "")
+
 }
 
 func (p *MiddlewareCROS) Condition() bool {
@@ -39,22 +49,28 @@ func (p *MiddlewareCROS) Condition() bool {
 
 func (p *MiddlewareCROS) Function() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		method := c.Request.Method
-		origin := c.GetHeader("Origin")
-		if origin == "" {
-			origin = "*"
+		if p.wildcard {
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Headers", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
+			c.Header("Access-Control-Expose-Headers", "*")
+			c.Header("Access-Control-Allow-Credentials", "true")
+		} else {
+			origin := c.GetHeader("Origin")
+			if origin == "" {
+				origin = "*"
+			}
+			headers := c.GetHeader("Access-Control-Request-Headers")
+			if headers == "" {
+				headers = "*"
+			}
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Headers", headers)
+			c.Header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Expose-Headers", p.expose)
 		}
-		headers := c.GetHeader("Access-Control-Request-Headers")
-		if headers == "" {
-			headers = "*"
-		}
-		c.Header("Access-Control-Allow-Origin", origin)
-		c.Header("Access-Control-Allow-Headers", headers)
-		c.Header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Expose-Headers", "*")
-		c.Header("Access-Control-Allow-Credentials", "true")
-
-		if method == "OPTIONS" {
+		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 		}
 

@@ -142,8 +142,8 @@ func createDB(conf config.TypedConfig, prefix string) (*sql.DB, error) {
 			}
 		case map[interface{}]interface{}:
 			for k, v := range cparams {
-				key := fmt.Sprintf("%s", k)
-				value := fmt.Sprintf("%s", v)
+				key := fmt.Sprintf("%v", k)
+				value := fmt.Sprintf("%v", v)
 				params[key] = value
 			}
 		default:
