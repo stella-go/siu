@@ -297,20 +297,20 @@ func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (
 				key, defaultValue := placeholder[0:index], placeholder[index+1:]
 				if value, ok := r.Resolve(key); ok {
 					convertValue := reflect.ValueOf(value).Convert(typ)
-					common.DEBUG("Found value type %s with key \"%s\": \"%v\"", typ, valueTag, value)
+					common.DEBUG("Found type %s value with key \"%s\": \"%v\"", typ, valueTag, value)
 					return convertValue, convertValue.IsZero(), nil
 				} else {
 					convertValue, err := convertString(defaultValue, typ)
 					if err != nil {
 						return reflect.Value{}, true, err
 					}
-					common.DEBUG("Not found value type %s with key \"%s\", default is \"%v\"", typ, valueTag, defaultValue)
+					common.DEBUG("Not found type %s value with key \"%s\", use default value: \"%v\"", typ, valueTag, defaultValue)
 					return convertValue, convertValue.IsZero(), nil
 				}
 			} else {
 				if value, ok := r.Resolve(placeholder); ok {
 					convertValue := reflect.ValueOf(value).Convert(typ)
-					common.DEBUG("Found value type %s with key \"%s\": \"%v\"", typ, valueTag, value)
+					common.DEBUG("Found type %s value with key \"%s\": \"%v\"", typ, valueTag, value)
 					return convertValue, convertValue.IsZero(), nil
 				} else {
 					return resolveValueWithDefault(tagMap, r, typ)
@@ -321,7 +321,7 @@ func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (
 			if err != nil {
 				return reflect.Value{}, true, err
 			}
-			common.DEBUG("Value type %s with key \"%s\", the key is not a placeholder, use the value: \"%v\"", typ, valueTag, valueTag)
+			common.DEBUG("type %s value with key \"%s\", the key is not a placeholder, use the value: \"%v\"", typ, valueTag, valueTag)
 			return convertValue, convertValue.IsZero(), nil
 		}
 	} else {
@@ -335,10 +335,10 @@ func resolveValueWithDefault(tagMap map[string]string, r ValueResolver, typ refl
 		if err != nil {
 			return reflect.Value{}, true, err
 		}
-		common.DEBUG("Not found value type %s with key \"%s\", default is \"%v\"", typ, tagMap["value"], defaultValue)
+		common.DEBUG("Not found type %s value with key \"%s\", use default value: \"%v\"", typ, tagMap["value"], defaultValue)
 		return convertValue, convertValue.IsZero(), nil
 	}
-	return reflect.Value{}, true, fmt.Errorf("value type %s with key \"%s\" not found, default is not set", typ, tagMap["value"])
+	return reflect.Value{}, true, fmt.Errorf("type %s value with key \"%s\" not found, default is not set", typ, tagMap["value"])
 }
 
 func convertString(value string, typ reflect.Type) (reflect.Value, error) {
