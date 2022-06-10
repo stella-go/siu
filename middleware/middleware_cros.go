@@ -36,7 +36,7 @@ type MiddlewareCROS struct {
 
 func (p *MiddlewareCROS) Init() {
 	p.wildcard = p.Conf.GetBoolOr(CROSMiddleWildcardKey, true)
-	p.expose = p.Conf.GetStringOr(CROSMiddleExposedKey, "")
+	p.expose = p.Conf.GetStringOr(CROSMiddleExposedKey, "*")
 
 }
 
