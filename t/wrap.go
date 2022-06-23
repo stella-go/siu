@@ -17,6 +17,7 @@ package t
 import (
 	"time"
 
+	"github.com/stella-go/siu/t/common"
 	"github.com/stella-go/siu/t/n"
 	"github.com/stella-go/siu/t/stackerror"
 )
@@ -87,4 +88,16 @@ func Time(val time.Time) *n.Time {
 
 func Error(err error) *stackerror.Error {
 	return stackerror.NewError(3, err)
+}
+
+func Success[T any](data T) *common.ResultBean[T] {
+	return &common.ResultBean[T]{Code: Int(200), Message: String("success"), Data: data}
+}
+
+func Fail() *common.ResultBean[any] {
+	return &common.ResultBean[any]{Code: Int(500), Message: String("failed")}
+}
+
+func FailWith(code int, message string) *common.ResultBean[any] {
+	return &common.ResultBean[any]{Code: Int(code), Message: String(message)}
 }
