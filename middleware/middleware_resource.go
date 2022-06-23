@@ -23,10 +23,12 @@ import (
 )
 
 const (
-	ResourceMiddlePrefixKey     = "middleware.resource.prefix"
-	ResourceMiddleDisableKey    = "middleware.resource.disable"
+	ResourceMiddlePrefixKey  = "middleware.resource.prefix"
+	ResourceMiddleExcludeKey = "middleware.resource.exclude"
+	ResourceMiddleDisableKey = "middleware.resource.disable"
+
 	ResourceMiddleDefaultPrefix = "/resources"
-	ResourceMiddleOrder         = 20
+	ResourceMiddleOrder         = 40
 )
 
 type MiddlewareResource struct {
@@ -41,8 +43,9 @@ func (p *MiddlewareResource) Condition() bool {
 }
 
 func (p *MiddlewareResource) Function() gin.HandlerFunc {
-	resourcesPrefix := p.Conf.GetStringOr(ResourceMiddlePrefixKey, ResourceMiddleDefaultPrefix)
-	return Serve(resourcesPrefix, LocalFile("resources", true))
+	prefix := p.Conf.GetStringOr(ResourceMiddlePrefixKey, ResourceMiddleDefaultPrefix)
+	exclude := p.Conf.GetStringOr(ResourceMiddleExcludeKey, "")
+	return Serve(prefix, exclude, LocalFile("resources", true))
 }
 
 func (p *MiddlewareResource) Order() int {
@@ -51,7 +54,7 @@ func (p *MiddlewareResource) Order() int {
 
 type ServeFileSystem interface {
 	http.FileSystem
-	Exists(prefix string, path string) bool
+	Exists(prefix string, exclude string, path string) bool
 }
 
 type LocalFileSystem struct {
@@ -68,7 +71,10 @@ func LocalFile(root string, indexes bool) *LocalFileSystem {
 	}
 }
 
-func (l *LocalFileSystem) Exists(prefix string, filepath string) bool {
+func (l *LocalFileSystem) Exists(prefix string, exclude string, filepath string) bool {
+	if p := strings.TrimPrefix(filepath, exclude); len(p) < len(filepath) {
+		return false
+	}
 	if p := strings.TrimPrefix(filepath, prefix); len(p) < len(filepath) {
 		return true
 	}
@@ -82,19 +88,19 @@ func (l *LocalFileSystem) Open(name string) (http.File, error) {
 	return f, err
 }
 
-func Serve(resourcesPrefix string, fs ServeFileSystem) gin.HandlerFunc {
+func Serve(prefix string, exclude string, fs ServeFileSystem) gin.HandlerFunc {
 	fileserver := http.FileServer(fs)
-	if resourcesPrefix != "" {
-		fileserver = http.StripPrefix(resourcesPrefix, fileserver)
+	if prefix != "" {
+		fileserver = http.StripPrefix(prefix, fileserver)
 	}
 	return func(c *gin.Context) {
 		uri := c.Request.URL.Path
-		if uri == "/" || uri == "/index.html" {
-			c.Redirect(http.StatusFound, resourcesPrefix)
+		if (prefix != "" && prefix != "/") && (uri == "/" || uri == "/index.html") {
+			c.Redirect(http.StatusFound, prefix)
 			c.Abort()
 			return
 		}
-		if fs.Exists(resourcesPrefix, c.Request.URL.Path) {
+		if fs.Exists(prefix, exclude, c.Request.URL.Path) {
 			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
 		}

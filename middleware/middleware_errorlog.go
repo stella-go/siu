@@ -15,47 +15,44 @@
 package middleware
 
 import (
-	"time"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/interfaces"
+	"github.com/stella-go/siu/t/stackerror"
 )
 
 const (
-	AccessMiddleDisableKey = "middleware.access.disable"
-	AccessMiddleOrder      = 10
+	ErrorlogMiddleDisableKey = "middleware.error-log.disable"
+	ErrorlogMiddleOrder      = 30
 )
 
-type MiddlewareAccess struct {
+type MiddlewareErrorlog struct {
 	Conf   config.TypedConfig `@siu:"name='environment',default='type'"`
 	Logger interfaces.Logger  `@siu:"name='logger',default='type'"`
 }
 
-func (p *MiddlewareAccess) Condition() bool {
-	if v, ok := p.Conf.GetBool(AccessMiddleDisableKey); ok && v {
+func (p *MiddlewareErrorlog) Condition() bool {
+	if v, ok := p.Conf.GetBool(ErrorlogMiddleDisableKey); ok && v {
 		return false
 	}
 	return true
 }
 
-func (p *MiddlewareAccess) Function() gin.HandlerFunc {
+func (p *MiddlewareErrorlog) Function() gin.HandlerFunc {
+	message := "Internal Server Error"
 	return func(c *gin.Context) {
-		start := time.Now()
-		raw := c.Request.URL.RawQuery
-		path := c.Request.URL.Path
-		if raw != "" {
-			path = path + "?" + raw
-		}
+		defer func() {
+			if err := recover(); err != nil {
+				err = stackerror.NewError(3, err.(error))
+				p.Logger.ERROR("", err)
+				c.AbortWithError(500, errors.New(message))
+			}
+		}()
 		c.Next()
-		latency := time.Since(start) / time.Millisecond
-		ip := c.ClientIP()
-		method := c.Request.Method
-		status := c.Writer.Status()
-		size := c.Writer.Size()
-		p.Logger.INFO("%-4s %3d %s %s %dms %dB", method, status, path, ip, latency, size)
 	}
 }
-func (p *MiddlewareAccess) Order() int {
-	return AccessMiddleOrder
+func (p *MiddlewareErrorlog) Order() int {
+	return ErrorlogMiddleOrder
 }

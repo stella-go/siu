@@ -25,7 +25,7 @@ const (
 	CROSMiddleDisableKey  = "middleware.cros.disable"
 	CROSMiddleWildcardKey = "middleware.cros.wildcard"
 	CROSMiddleExposedKey  = "middleware.cros.expose"
-	CROSMiddleOrder       = 10
+	CROSMiddleOrder       = 20
 )
 
 type MiddlewareCROS struct {

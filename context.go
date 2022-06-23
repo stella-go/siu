@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"reflect"
 	"sort"
 	"strings"
@@ -182,7 +183,7 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	ctx := newContext(environment, contextLogger, server)
 
 	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{})
-	ctx.Use(&middleware.MiddlewareCROS{}, &middleware.MiddlewareResource{}, &middleware.MiddlewareAccess{})
+	ctx.Use(&middleware.MiddlewareAccess{}, &middleware.MiddlewareCROS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{})
 
 	return ctx
 }
@@ -385,6 +386,7 @@ func (c *context) Run() {
 			panic(err)
 		}
 	}
+	prefix := c.environment.GetStringOr("server.prefix", "")
 	for _, router := range c.routers {
 		rs := router.Router()
 		group := c.server.Group("")
@@ -397,7 +399,7 @@ func (c *context) Run() {
 			tokens := strings.Split(name, " ")
 			methods := strings.Split(tokens[0], ",")
 			for _, method := range methods {
-				group.Handle(strings.ToUpper(method), tokens[1], function)
+				group.Handle(strings.ToUpper(method), path.Join(prefix, tokens[1]), function)
 			}
 		}
 	}
