@@ -28,6 +28,10 @@ const (
 	ErrorlogMiddleOrder      = 30
 )
 
+var (
+	err500 = errors.New("internal server error")
+)
+
 type MiddlewareErrorlog struct {
 	Conf   config.TypedConfig `@siu:"name='environment',default='type'"`
 	Logger interfaces.Logger  `@siu:"name='logger',default='type'"`
@@ -41,13 +45,12 @@ func (p *MiddlewareErrorlog) Condition() bool {
 }
 
 func (p *MiddlewareErrorlog) Function() gin.HandlerFunc {
-	message := "Internal Server Error"
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
 				err = stackerror.NewError(3, err.(error))
 				p.Logger.ERROR("", err)
-				c.AbortWithError(500, errors.New(message))
+				c.AbortWithError(500, err500)
 			}
 		}()
 		c.Next()

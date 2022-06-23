@@ -17,7 +17,6 @@ package n
 import (
 	"database/sql/driver"
 	"fmt"
-	"reflect"
 	"strconv"
 	"time"
 )
@@ -34,6 +33,7 @@ func (p Bool) MarshalJSON() ([]byte, error) {
 func (p *Bool) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -87,7 +87,7 @@ func (p *Bool) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to bool", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to bool", value)
 	}
 	return nil
 }
@@ -98,6 +98,8 @@ func (p Bool) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Bool:
 		return p.Val == t.Val
+	case bool:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -115,6 +117,7 @@ func (p Int) MarshalJSON() ([]byte, error) {
 func (p *Int) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -160,7 +163,7 @@ func (p *Int) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to int", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to int", value)
 	}
 	return nil
 }
@@ -171,6 +174,8 @@ func (p Int) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int:
 		return p.Val == t.Val
+	case int:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -188,6 +193,7 @@ func (p Int8) MarshalJSON() ([]byte, error) {
 func (p *Int8) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -229,11 +235,11 @@ func (p *Int8) Scan(value interface{}) error {
 		}
 		p.Val = int8(i)
 	case time.Time:
-		return fmt.Errorf("can't convert type %s to int8", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to int8", value)
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to int8", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to int8", value)
 	}
 	return nil
 }
@@ -244,6 +250,8 @@ func (p Int8) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int8:
 		return p.Val == t.Val
+	case int8:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -261,6 +269,7 @@ func (p Int16) MarshalJSON() ([]byte, error) {
 func (p *Int16) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -302,11 +311,11 @@ func (p *Int16) Scan(value interface{}) error {
 		}
 		p.Val = int16(i)
 	case time.Time:
-		return fmt.Errorf("can't convert type %s to int16", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to int16", value)
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to int16", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to int16", value)
 	}
 	return nil
 }
@@ -317,6 +326,8 @@ func (p Int16) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int16:
 		return p.Val == t.Val
+	case int16:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -334,6 +345,7 @@ func (p Int32) MarshalJSON() ([]byte, error) {
 func (p *Int32) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -379,7 +391,7 @@ func (p *Int32) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to int32", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to int32", value)
 	}
 	return nil
 }
@@ -390,6 +402,8 @@ func (p Int32) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int32:
 		return p.Val == t.Val
+	case int32:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -410,6 +424,7 @@ func (p Int64) MarshalJSON() ([]byte, error) {
 func (p *Int64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -455,7 +470,7 @@ func (p *Int64) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to int64", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to int64", value)
 	}
 	return nil
 }
@@ -466,6 +481,8 @@ func (p Int64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int64:
 		return p.Val == t.Val
+	case int64:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -483,6 +500,7 @@ func (p Uint) MarshalJSON() ([]byte, error) {
 func (p *Uint) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -524,11 +542,11 @@ func (p *Uint) Scan(value interface{}) error {
 		}
 		p.Val = uint(i)
 	case time.Time:
-		return fmt.Errorf("can't convert type %s to uint", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint", value)
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to uint", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint", value)
 	}
 	return nil
 }
@@ -539,6 +557,8 @@ func (p Uint) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint:
 		return p.Val == t.Val
+	case uint:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -556,6 +576,7 @@ func (p Uint8) MarshalJSON() ([]byte, error) {
 func (p *Uint8) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -597,11 +618,11 @@ func (p *Uint8) Scan(value interface{}) error {
 		}
 		p.Val = uint8(i)
 	case time.Time:
-		return fmt.Errorf("can't convert type %s to uint8", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint8", value)
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to uint8", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint8", value)
 	}
 	return nil
 }
@@ -612,6 +633,8 @@ func (p Uint8) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint8:
 		return p.Val == t.Val
+	case uint8:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -632,6 +655,7 @@ func (p Uint16) MarshalJSON() ([]byte, error) {
 func (p *Uint16) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -673,11 +697,11 @@ func (p *Uint16) Scan(value interface{}) error {
 		}
 		p.Val = uint16(i)
 	case time.Time:
-		return fmt.Errorf("can't convert type %s to uint16", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint16", value)
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to uint16", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint16", value)
 	}
 	return nil
 }
@@ -688,6 +712,8 @@ func (p Uint16) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint16:
 		return p.Val == t.Val
+	case uint16:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -705,6 +731,7 @@ func (p Uint32) MarshalJSON() ([]byte, error) {
 func (p *Uint32) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -750,7 +777,7 @@ func (p *Uint32) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to uint32", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint32", value)
 	}
 	return nil
 }
@@ -761,6 +788,8 @@ func (p Uint32) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint32:
 		return p.Val == t.Val
+	case uint32:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -778,6 +807,7 @@ func (p Uint64) MarshalJSON() ([]byte, error) {
 func (p *Uint64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -823,7 +853,7 @@ func (p *Uint64) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to uint64", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to uint64", value)
 	}
 	return nil
 }
@@ -834,6 +864,8 @@ func (p Uint64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint64:
 		return p.Val == t.Val
+	case uint64:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -851,6 +883,7 @@ func (p Float32) MarshalJSON() ([]byte, error) {
 func (p *Float32) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -896,7 +929,7 @@ func (p *Float32) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to float32", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to float32", value)
 	}
 	return nil
 }
@@ -907,6 +940,8 @@ func (p Float32) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Float32:
 		return p.Val == t.Val
+	case float32:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -924,6 +959,7 @@ func (p Float64) MarshalJSON() ([]byte, error) {
 func (p *Float64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -969,7 +1005,7 @@ func (p *Float64) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to float64", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to float64", value)
 	}
 	return nil
 }
@@ -980,6 +1016,8 @@ func (p Float64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Float64:
 		return p.Val == t.Val
+	case float64:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -997,6 +1035,7 @@ func (p Complex64) MarshalJSON() ([]byte, error) {
 func (p *Complex64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -1016,9 +1055,9 @@ func (p Complex64) String() string {
 func (p *Complex64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
-		return fmt.Errorf("can't convert type %s to complex64", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex64", value)
 	case float64:
-		return fmt.Errorf("can't convert type %s to complex64", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex64", value)
 	case bool:
 		if v {
 			p.Val = 1
@@ -1038,11 +1077,11 @@ func (p *Complex64) Scan(value interface{}) error {
 		}
 		p.Val = complex64(c)
 	case time.Time:
-		return fmt.Errorf("can't convert type %s to complex64", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex64", value)
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to complex64", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex64", value)
 	}
 	return nil
 }
@@ -1053,6 +1092,8 @@ func (p Complex64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Complex64:
 		return p.Val == t.Val
+	case complex64:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -1070,6 +1111,7 @@ func (p Complex128) MarshalJSON() ([]byte, error) {
 func (p *Complex128) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -1089,9 +1131,9 @@ func (p Complex128) String() string {
 func (p *Complex128) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
-		return fmt.Errorf("can't convert type %s to complex128", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex128", value)
 	case float64:
-		return fmt.Errorf("can't convert type %s to complex128", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex128", value)
 	case bool:
 		if v {
 			p.Val = 1
@@ -1111,11 +1153,11 @@ func (p *Complex128) Scan(value interface{}) error {
 		}
 		p.Val = c
 	case time.Time:
-		return fmt.Errorf("can't convert type %s to complex128", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex128", value)
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to complex128", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to complex128", value)
 	}
 	return nil
 }
@@ -1126,6 +1168,8 @@ func (p Complex128) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Complex128:
 		return p.Val == t.Val
+	case complex128:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -1143,6 +1187,7 @@ func (p String) MarshalJSON() ([]byte, error) {
 func (p *String) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
+		return nil
 	}
 	s := string(data)
 	if s == "null" {
@@ -1176,7 +1221,7 @@ func (p *String) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to string", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to string", value)
 	}
 	return nil
 }
@@ -1187,6 +1232,8 @@ func (p String) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case String:
 		return p.Val == t.Val
+	case string:
+		return p.Val == t
 	default:
 		return false
 	}
@@ -1202,17 +1249,18 @@ func (p Time) MarshalJSON() ([]byte, error) {
 	return []byte(s), nil
 }
 func (p *Time) UnmarshalJSON(data []byte) error {
+	if data == nil {
+		p = nil
+		return nil
+	}
 	s := string(data)
 	if s == "null" {
 		p = nil
 		return nil
 	}
-	if string(data) == "null" {
-		return nil
-	}
-	tm, err := time.ParseInLocation("\"2006-01-02 15:04:05\"", string(data), time.Local)
+	tm, err := time.ParseInLocation("\"2006-01-02 15:04:05\"", s, time.Local)
 	if err != nil {
-		tm, err := time.ParseInLocation("\"2006-01-02\"", string(data), time.Local)
+		tm, err := time.ParseInLocation("\"2006-01-02\"", s, time.Local)
 		if err != nil {
 			return err
 		}
@@ -1230,9 +1278,9 @@ func (p *Time) Scan(value interface{}) error {
 	case int64:
 		p.Val = time.Unix(v, 0)
 	case float64:
-		return fmt.Errorf("can't convert type %s to time.Time", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to time.Time", value)
 	case bool:
-		return fmt.Errorf("can't convert type %s to time.Time", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to time.Time", value)
 	case []byte:
 		t, err := time.ParseInLocation(time.RFC3339Nano, string(v), time.Local)
 		if err != nil {
@@ -1250,7 +1298,7 @@ func (p *Time) Scan(value interface{}) error {
 	case nil:
 		p = nil
 	default:
-		return fmt.Errorf("can't convert type %s to time.Time", reflect.TypeOf(value))
+		return fmt.Errorf("can't convert type %T to time.Time", value)
 	}
 	return nil
 }
@@ -1261,6 +1309,8 @@ func (p Time) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Time:
 		return p.Val == t.Val
+	case time.Time:
+		return p.Val == t
 	default:
 		return false
 	}
