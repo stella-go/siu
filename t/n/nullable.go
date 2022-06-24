@@ -1315,3 +1315,7 @@ func (p Time) Equals(o interface{}) bool {
 		return false
 	}
 }
+func (p *Time) Round(d time.Duration) *Time {
+	p.Val = p.Val.Round(d)
+	return p
+}
