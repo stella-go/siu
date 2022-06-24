@@ -91,13 +91,13 @@ func Error(err error) *stackerror.Error {
 }
 
 func Success[T any](data T) *common.ResultBean[T] {
-	return &common.ResultBean[T]{Code: Int(200), Message: String("success"), Data: data}
+	return &common.ResultBean[T]{Code: 200, Message: "success", Data: data}
 }
 
 func Fail() *common.ResultBean[any] {
-	return &common.ResultBean[any]{Code: Int(500), Message: String("failed")}
+	return &common.ResultBean[any]{Code: 500, Message: "failed"}
 }
 
 func FailWith(code int, message string) *common.ResultBean[any] {
-	return &common.ResultBean[any]{Code: Int(code), Message: String(message)}
+	return &common.ResultBean[any]{Code: code, Message: message}
 }
