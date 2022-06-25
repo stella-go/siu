@@ -24,7 +24,7 @@ func err2() error {
 }
 
 func TestSuccess(t *testing.T) {
-	result := Success(map[string]string{
+	result := SuccessWith(map[string]string{
 		"foo": "B",
 		"bar": "A",
 	})

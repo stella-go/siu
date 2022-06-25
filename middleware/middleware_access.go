@@ -53,7 +53,7 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 		method := c.Request.Method
 		status := c.Writer.Status()
 		size := c.Writer.Size()
-		p.Logger.INFO("%-4s %3d %s %s %dms %dB", method, status, path, ip, latency, size)
+		p.Logger.INFO("%-4s %3d %s %s %dms %d", method, status, path, ip, latency, size)
 	}
 }
 func (p *MiddlewareAccess) Order() int {

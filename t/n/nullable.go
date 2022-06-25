@@ -1258,11 +1258,11 @@ func (p *Time) UnmarshalJSON(data []byte) error {
 		p = nil
 		return nil
 	}
-	tm, err := time.ParseInLocation("\"2006-01-02 15:04:05\"", s, time.Local)
-	if err != nil {
+	tm, outerr := time.ParseInLocation("\"2006-01-02 15:04:05\"", s, time.Local)
+	if outerr != nil {
 		tm, err := time.ParseInLocation("\"2006-01-02\"", s, time.Local)
 		if err != nil {
-			return err
+			return outerr
 		}
 		p.Val = tm
 		return nil

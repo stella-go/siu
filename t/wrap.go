@@ -17,7 +17,6 @@ package t
 import (
 	"time"
 
-	"github.com/stella-go/siu/t/common"
 	"github.com/stella-go/siu/t/n"
 	"github.com/stella-go/siu/t/stackerror"
 )
@@ -90,14 +89,18 @@ func Error(err error) *stackerror.Error {
 	return stackerror.NewError(3, err)
 }
 
-func Success[T any](data T) *common.ResultBean[T] {
-	return &common.ResultBean[T]{Code: 200, Message: "success", Data: data}
+func Success() *ResultBean[any] {
+	return &ResultBean[any]{Code: 200, Message: "success"}
 }
 
-func Fail() *common.ResultBean[any] {
-	return &common.ResultBean[any]{Code: 500, Message: "failed"}
+func SuccessWith[T any](data T) *ResultBean[T] {
+	return &ResultBean[T]{Code: 200, Message: "success", Data: data}
 }
 
-func FailWith(code int, message string) *common.ResultBean[any] {
-	return &common.ResultBean[any]{Code: code, Message: message}
+func Fail() *ResultBean[any] {
+	return &ResultBean[any]{Code: 500, Message: "failed"}
+}
+
+func FailWith(code int, message string) *ResultBean[any] {
+	return &ResultBean[any]{Code: code, Message: message}
 }
