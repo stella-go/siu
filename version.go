@@ -14,4 +14,4 @@
 
 package siu
 
-const VERSION = "v1.2.1"
+const VERSION = "v1.2.2"
