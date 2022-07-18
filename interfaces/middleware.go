@@ -19,21 +19,7 @@ import (
 )
 
 type OrderedMiddleware interface {
+	Order
 	Condition() bool
 	Function() gin.HandlerFunc
-	Order() int
-}
-
-type OrderedMiddlewareSlice []OrderedMiddleware
-
-func (p OrderedMiddlewareSlice) Len() int {
-	return len(p)
-}
-
-func (p OrderedMiddlewareSlice) Less(i, j int) bool {
-	return p[i].Order() < p[j].Order()
-}
-
-func (p OrderedMiddlewareSlice) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
 }

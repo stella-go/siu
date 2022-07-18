@@ -57,15 +57,53 @@ func (*C) Decrypt(enc string) (string, error) {
 	return strings.ReplaceAll(enc, "x", ""), nil
 }
 
-type R struct{}
+type R1 struct{}
 
-func (*R) Named() map[string]interface{} {
+var e = &config.DecipherEnvironment{Cipher: &C{}}
+
+func (*R1) Named() map[string]interface{} {
 	return map[string]interface{}{
-		"environment": &config.EnciphermentEnvironment{Cipher: &C{}},
+		"environment": e,
 	}
 }
-func (*R) Typed() map[reflect.Type]interface{} {
-	return nil
+func (*R1) Typed() map[reflect.Type]interface{} {
+	return map[reflect.Type]interface{}{
+		reflect.TypeOf((*config.TypedConfig)(nil)).Elem(): e,
+	}
+}
+
+func (*R1) Order() int {
+	return 1
+}
+
+type R2 struct {
+	Server *gin.Engine `@siu:""`
+}
+
+type AfterServer struct {
+	Server *gin.Engine `@siu:""` //`@siu:"name='server'"`
+}
+
+func (p *AfterServer) Init() {
+	fmt.Println("Initialized L")
+	p.Server.GET("/after", func(ctx *gin.Context) {})
+}
+
+var after = &AfterServer{}
+
+func (*R2) Named() map[string]interface{} {
+	return map[string]interface{}{
+		"after": after,
+	}
+}
+func (*R2) Typed() map[reflect.Type]interface{} {
+	return map[reflect.Type]interface{}{
+		// reflect.TypeOf((*interfaces.Logger)(nil)).Elem(): l,
+	}
+}
+
+func (*R2) Order() int {
+	return 1 << 20
 }
 
 type Router struct{}
@@ -90,12 +128,13 @@ func TestRun(t *testing.T) {
 		http.Get("http://localhost:8080/abc")
 		syscall.Kill(os.Getpid(), 15)
 	}()
+	os.Setenv("STELLA_SERVER_MODE", "debug")
 	os.Setenv("STELLA_LOGGER_SIU", "false")
 	os.Setenv("STELLA_LOGGER_LEVEL", "debug")
 	os.Setenv("STELLA_ZOOKEEPER", "zookeeperxxx")
 	os.Setenv("STELLA_ZOOKEEPER_SERVERS", "127.x0x.0.1:x21x81")
 	os.Setenv("STELLA_MIDDLEWARE_CROS_DISABLE", "true")
-	siu.Register(&R{})
+	siu.Register(&R2{}, &R1{})
 	siu.Use(&S{})
 	siu.Route(&Router{})
 	siu.Run()

@@ -19,6 +19,7 @@ import (
 )
 
 type InjectRegister interface {
+	Order
 	Named() map[string]interface{}
 	Typed() map[reflect.Type]interface{}
 }

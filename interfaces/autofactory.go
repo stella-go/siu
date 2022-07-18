@@ -19,25 +19,11 @@ import (
 )
 
 type AutoFactory interface {
+	Order
 	Condition() bool
 	OnStart() error
 	OnStop() error
-	Order() int
 	Name() string
 	Named() map[string]interface{}
 	Typed() map[reflect.Type]interface{}
-}
-
-type AutoFactorySlice []AutoFactory
-
-func (p AutoFactorySlice) Len() int {
-	return len(p)
-}
-
-func (p AutoFactorySlice) Less(i, j int) bool {
-	return p[i].Order() < p[j].Order()
-}
-
-func (p AutoFactorySlice) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
 }

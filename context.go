@@ -59,6 +59,8 @@ const (
 	loggerFileEnvKey         = loggerEnvKey + ".file"
 	loggerMaxFilesEnvKey     = loggerEnvKey + ".maxFiles"
 	loggerMaxFileSizesEnvKey = loggerEnvKey + ".maxFileSize"
+
+	RegisterOrderSplitterLine = 1 << 16
 )
 
 type buildinLogger struct {
@@ -253,17 +255,45 @@ func (r *resolver) Resolve(key string) (interface{}, bool) {
 }
 
 func (c *context) register() {
-	for _, register := range c.registers {
+	rs := interfaces.OrderSlice[interfaces.InjectRegister](c.registers)
+	sort.Sort(rs)
+	index := 0
+	for ; index < len(rs); index++ {
+		register := rs[index]
+		if register.Order() >= RegisterOrderSplitterLine {
+			break
+		}
+		s := make(map[interface{}]struct{})
 		for k, v := range register.Named() {
-			err := inject.RegisterNamed(k, v)
-			if err != nil {
-				panic(err)
+			if _, ok := inject.GetNamed(k); !ok {
+				if _, ok := s[v]; !ok {
+					err := inject.Inject(nil, v)
+					if err != nil {
+						panic(err)
+					}
+				}
+				err := inject.RegisterNamed(k, v)
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				panic(fmt.Errorf("named object \"%s\" is already registered", k))
 			}
 		}
 		for k, v := range register.Typed() {
-			err := inject.RegisterTyped(k, v)
-			if err != nil {
-				panic(err)
+			if _, ok := inject.GetTyped(k); !ok {
+				if _, ok := s[v]; !ok {
+					err := inject.Inject(nil, v)
+					if err != nil {
+						panic(err)
+					}
+				}
+				err := inject.RegisterTyped(k, v)
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				panic(fmt.Errorf("typed object %s is already registered", k))
 			}
 		}
 	}
@@ -307,11 +337,48 @@ func (c *context) register() {
 				panic(err)
 			}
 		}
-		refType := reflect.TypeOf((*gin.Engine)(nil)).Elem()
+		refType := reflect.TypeOf((*gin.Engine)(nil))
 		if _, ok := inject.GetTyped(refType); !ok {
 			err := inject.RegisterTyped(refType, c.server)
 			if err != nil {
 				panic(err)
+			}
+		}
+	}
+
+	for ; index < len(rs); index++ {
+		register := rs[index]
+		s := make(map[interface{}]struct{})
+		for k, v := range register.Named() {
+			if _, ok := inject.GetNamed(k); !ok {
+				if _, ok := s[v]; !ok {
+					err := inject.Inject(nil, v)
+					if err != nil {
+						panic(err)
+					}
+				}
+				err := inject.RegisterNamed(k, v)
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				panic(fmt.Errorf("named object \"%s\" is already registered", k))
+			}
+		}
+		for k, v := range register.Typed() {
+			if _, ok := inject.GetTyped(k); !ok {
+				if _, ok := s[v]; !ok {
+					err := inject.Inject(nil, v)
+					if err != nil {
+						panic(err)
+					}
+				}
+				err := inject.RegisterTyped(k, v)
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				panic(fmt.Errorf("typed object %s is already registered", k))
 			}
 		}
 	}
@@ -321,7 +388,7 @@ func (c *context) Run() {
 	c.register()
 
 	resolver := &resolver{c.environment}
-	fs := interfaces.AutoFactorySlice(c.auto)
+	fs := interfaces.OrderSlice[interfaces.AutoFactory](c.auto)
 	sort.Sort(fs)
 	for _, a := range fs {
 		err := inject.Inject(resolver, a)
@@ -367,7 +434,7 @@ func (c *context) Run() {
 		c.logger.INFO("Server is stop")
 	}()
 
-	ms := interfaces.OrderedMiddlewareSlice(c.middleware)
+	ms := interfaces.OrderSlice[interfaces.OrderedMiddleware](c.middleware)
 	sort.Sort(ms)
 	for _, m := range ms {
 		err := inject.Inject(resolver, m)

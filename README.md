@@ -227,6 +227,9 @@ middleware:
   resource.disable: false # Set whether to disable resources serve, default false
 ```
 
+## Custom Injection
+Implement the InjectRegister interface and use `siu.Register()` to register.
+
 ## Custom Component
 Implement the AutoFactory interface and use `siu.AutoFactory()` to register.
 
