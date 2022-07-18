@@ -60,7 +60,7 @@ const (
 	loggerMaxFilesEnvKey     = loggerEnvKey + ".maxFiles"
 	loggerMaxFileSizesEnvKey = loggerEnvKey + ".maxFileSize"
 
-	RegisterOrderSplitterLine = 1 << 16
+	BuildinRegisterOrder = 0
 )
 
 type buildinLogger struct {
@@ -183,7 +183,7 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	server.SetTrustedProxies(nil)
 
 	ctx := newContext(environment, contextLogger, server)
-
+	ctx.Register(&buildinRegister{ctx})
 	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{})
 	ctx.Use(&middleware.MiddlewareAccess{}, &middleware.MiddlewareCROS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{})
 
@@ -254,19 +254,36 @@ func (r *resolver) Resolve(key string) (interface{}, bool) {
 	return r.env.Get(key)
 }
 
+type buildinRegister struct {
+	c *context
+}
+
+func (p *buildinRegister) Named() map[string]interface{} {
+	return map[string]interface{}{
+		"environment": p.c.environment,
+		"logger":      p.c.logger,
+		"server":      p.c.server,
+	}
+}
+func (p *buildinRegister) Typed() map[reflect.Type]interface{} {
+	return map[reflect.Type]interface{}{
+		reflect.TypeOf((*config.TypedConfig)(nil)).Elem(): p.c.environment,
+		reflect.TypeOf((*interfaces.Logger)(nil)).Elem():  p.c.logger,
+		reflect.TypeOf((*gin.Engine)(nil)):                p.c.server,
+	}
+}
+func (p *buildinRegister) Order() int {
+	return BuildinRegisterOrder
+}
+
 func (c *context) register() {
 	rs := interfaces.OrderSlice[interfaces.InjectRegister](c.registers)
 	sort.Sort(rs)
-	index := 0
-	for ; index < len(rs); index++ {
-		register := rs[index]
-		if register.Order() >= RegisterOrderSplitterLine {
-			break
-		}
+	for _, register := range rs {
 		s := make(map[interface{}]struct{})
 		for k, v := range register.Named() {
 			if _, ok := inject.GetNamed(k); !ok {
-				if _, ok := s[v]; !ok {
+				if _, ok := s[v]; !ok && register.Order() != BuildinRegisterOrder {
 					err := inject.Inject(nil, v)
 					if err != nil {
 						panic(err)
@@ -276,13 +293,14 @@ func (c *context) register() {
 				if err != nil {
 					panic(err)
 				}
-			} else {
+				s[v] = struct{}{}
+			} else if register.Order() != BuildinRegisterOrder {
 				panic(fmt.Errorf("named object \"%s\" is already registered", k))
 			}
 		}
 		for k, v := range register.Typed() {
 			if _, ok := inject.GetTyped(k); !ok {
-				if _, ok := s[v]; !ok {
+				if _, ok := s[v]; !ok && register.Order() != BuildinRegisterOrder {
 					err := inject.Inject(nil, v)
 					if err != nil {
 						panic(err)
@@ -292,92 +310,8 @@ func (c *context) register() {
 				if err != nil {
 					panic(err)
 				}
-			} else {
-				panic(fmt.Errorf("typed object %s is already registered", k))
-			}
-		}
-	}
-
-	{
-		if _, ok := inject.GetNamed("environment"); !ok {
-			err := inject.RegisterNamed("environment", c.environment)
-			if err != nil {
-				panic(err)
-			}
-		}
-		refType := reflect.TypeOf((*config.TypedConfig)(nil)).Elem()
-		if _, ok := inject.GetTyped(refType); !ok {
-			err := inject.RegisterTyped(refType, c.environment)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	{
-		if _, ok := inject.GetNamed("logger"); !ok {
-			err := inject.RegisterNamed("logger", c.logger)
-			if err != nil {
-				panic(err)
-			}
-		}
-		refType := reflect.TypeOf((*interfaces.Logger)(nil)).Elem()
-		if _, ok := inject.GetTyped(refType); !ok {
-			err := inject.RegisterTyped(refType, c.logger)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	{
-		if _, ok := inject.GetNamed("server"); !ok {
-			err := inject.RegisterNamed("server", c.server)
-			if err != nil {
-				panic(err)
-			}
-		}
-		refType := reflect.TypeOf((*gin.Engine)(nil))
-		if _, ok := inject.GetTyped(refType); !ok {
-			err := inject.RegisterTyped(refType, c.server)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	for ; index < len(rs); index++ {
-		register := rs[index]
-		s := make(map[interface{}]struct{})
-		for k, v := range register.Named() {
-			if _, ok := inject.GetNamed(k); !ok {
-				if _, ok := s[v]; !ok {
-					err := inject.Inject(nil, v)
-					if err != nil {
-						panic(err)
-					}
-				}
-				err := inject.RegisterNamed(k, v)
-				if err != nil {
-					panic(err)
-				}
-			} else {
-				panic(fmt.Errorf("named object \"%s\" is already registered", k))
-			}
-		}
-		for k, v := range register.Typed() {
-			if _, ok := inject.GetTyped(k); !ok {
-				if _, ok := s[v]; !ok {
-					err := inject.Inject(nil, v)
-					if err != nil {
-						panic(err)
-					}
-				}
-				err := inject.RegisterTyped(k, v)
-				if err != nil {
-					panic(err)
-				}
-			} else {
+				s[v] = struct{}{}
+			} else if register.Order() != BuildinRegisterOrder {
 				panic(fmt.Errorf("typed object %s is already registered", k))
 			}
 		}

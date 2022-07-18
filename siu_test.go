@@ -59,7 +59,7 @@ func (*C) Decrypt(enc string) (string, error) {
 
 type R1 struct{}
 
-var e = &config.DecipherEnvironment{Cipher: &C{}}
+var e = &config.DecryptEnvironment{Cipher: &C{}}
 
 func (*R1) Named() map[string]interface{} {
 	return map[string]interface{}{
@@ -73,7 +73,7 @@ func (*R1) Typed() map[reflect.Type]interface{} {
 }
 
 func (*R1) Order() int {
-	return 1
+	return -1
 }
 
 type R2 struct {
@@ -103,7 +103,7 @@ func (*R2) Typed() map[reflect.Type]interface{} {
 }
 
 func (*R2) Order() int {
-	return 1 << 20
+	return 1
 }
 
 type Router struct{}

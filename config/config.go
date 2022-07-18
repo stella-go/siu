@@ -310,27 +310,27 @@ func (p *ConfigurationEnvironment) GetStringOr(key string, defaultValue string) 
 	return env.GetStringOr(key, defaultValue)
 }
 
-type Decipher interface {
+type Cipher interface {
 	Decrypt(string) (string, error)
 }
 
-type DecipherEnvironment struct {
-	Cipher Decipher
+type DecryptEnvironment struct {
+	Cipher Cipher
 }
 
-func (p *DecipherEnvironment) Get(key string) (interface{}, bool) {
+func (p *DecryptEnvironment) Get(key string) (interface{}, bool) {
 	return env.Get(key)
 }
 
-func (p *DecipherEnvironment) GetOr(key string, defaultValue interface{}) interface{} {
+func (p *DecryptEnvironment) GetOr(key string, defaultValue interface{}) interface{} {
 	return env.GetOr(key, defaultValue)
 }
 
-func (p *DecipherEnvironment) GetInt(key string) (int, bool) {
+func (p *DecryptEnvironment) GetInt(key string) (int, bool) {
 	return env.GetInt(key)
 }
 
-func (p *DecipherEnvironment) GetString(key string) (string, bool) {
+func (p *DecryptEnvironment) GetString(key string) (string, bool) {
 	if p.Cipher == nil {
 		return env.GetString(key)
 	}
@@ -346,19 +346,19 @@ func (p *DecipherEnvironment) GetString(key string) (string, bool) {
 	}
 }
 
-func (p *DecipherEnvironment) GetBool(key string) (bool, bool) {
+func (p *DecryptEnvironment) GetBool(key string) (bool, bool) {
 	return env.GetBool(key)
 }
 
-func (p *DecipherEnvironment) GetIntOr(key string, defaultValue int) int {
+func (p *DecryptEnvironment) GetIntOr(key string, defaultValue int) int {
 	return env.GetIntOr(key, defaultValue)
 }
 
-func (p *DecipherEnvironment) GetBoolOr(key string, defaultValue bool) bool {
+func (p *DecryptEnvironment) GetBoolOr(key string, defaultValue bool) bool {
 	return env.GetBoolOr(key, defaultValue)
 }
 
-func (p *DecipherEnvironment) GetStringOr(key string, defaultValue string) string {
+func (p *DecryptEnvironment) GetStringOr(key string, defaultValue string) string {
 	if p.Cipher == nil {
 		return env.GetStringOr(key, defaultValue)
 	}
