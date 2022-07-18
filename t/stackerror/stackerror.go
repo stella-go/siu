@@ -12,6 +12,7 @@ type Error struct {
 	Stack   []string
 }
 
+// in general, skip is 3
 func NewError(skip int, err error) *Error {
 	pc := make([]uintptr, 128)
 	dep := runtime.Callers(skip, pc[:])

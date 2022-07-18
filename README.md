@@ -88,10 +88,12 @@ server:
   mode: release
   ip: 127.0.0.1
   port: 8080
+  prefix: "/"
 ```
 - **server.mode** Gin server mode. Optional value `release` or `debug`. Default value `release`.
 - **server.ip** Gin server bind ip. Default value `0.0.0.0`.
 - **server.port** Gin server port. Default value `8080`.
+- **server.prefix** Gin routers prefix. Default value `/`.
 
 ### Logger Related Configuration
 ```yml
@@ -126,7 +128,7 @@ mysql:
   passwd: root
   addr: 127.0.0.1:3306
   dbName: test
-  collation: utf8
+  collation: utf8mb4_bin
   timeout: 100000
   readTimeout: 50000
   writeTimeout: 50000
@@ -216,9 +218,13 @@ type Service struct {
 ## Middleware Related Configuration
 ```yml
 middleware:
-  cros.disable: false # Set whether to disable CROS, default false
-  resource.disable: false # Set whether to disable resources serve, default false
   access.disable: false # Set whether to disable access logging, default false
+  cros:
+    disable: false # Set whether to disable CROS, default false
+    wildcard: false # Set whether to enable wildcards, default true
+    expose: "*" # Set "Access-Control-Expose-Headers", separated by commas, default "*"
+  error-log.disable: false # Set whether to disable error logging, default false
+  resource.disable: false # Set whether to disable resources serve, default false
 ```
 
 ## Custom Component
