@@ -69,48 +69,66 @@ func (p *MiddlewareAccess) Condition() bool {
 
 func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		start := time.Now()
-		method := c.Request.Method
-		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
-		if query != "" {
-			path = path + "?" + query
-		}
-		proto := c.Request.Proto
-		headers := p.headerString(c.Request.Header)
-		bts, _ := io.ReadAll(c.Request.Body)
-		sb := &strings.Builder{}
-		if len(bts) > 0 {
-			s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s\n", method, path, proto, headers, bts)
-			sb.WriteString(s)
+		if !p.debug {
+			start := time.Now()
+			method := c.Request.Method
+			path := c.Request.URL.Path
+			query := c.Request.URL.RawQuery
+			if query != "" {
+				path = path + "?" + query
+			}
+
+			c.Next()
+
+			latency := time.Since(start) / time.Millisecond
+			ip := c.ClientIP()
+			size := c.Writer.Size()
+			status := c.Writer.Status()
+			p.Logger.INFO("%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
 		} else {
-			s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n", method, path, proto, headers)
-			sb.WriteString(s)
+			start := time.Now()
+			method := c.Request.Method
+			path := c.Request.URL.Path
+			query := c.Request.URL.RawQuery
+			if query != "" {
+				path = path + "?" + query
+			}
+			proto := c.Request.Proto
+			headers := p.headerString(c.Request.Header)
+			bts, _ := io.ReadAll(c.Request.Body)
+			sb := &strings.Builder{}
+			if len(bts) > 0 {
+				s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s\n", method, path, proto, headers, bts)
+				sb.WriteString(s)
+			} else {
+				s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n", method, path, proto, headers)
+				sb.WriteString(s)
+			}
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(bts))
+			writer := &CustomResponseWriter{ResponseWriter: c.Writer, body: &bytes.Buffer{}}
+			c.Writer = writer
+
+			c.Next()
+
+			latency := time.Since(start) / time.Millisecond
+			status := c.Writer.Status()
+			statusText := http.StatusText(status)
+			headers = p.headerString(c.Writer.Header())
+			ip := c.ClientIP()
+			size := c.Writer.Size()
+
+			bts = writer.body.Bytes()
+			if len(bts) > 0 {
+				s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts)
+				sb.WriteString(s)
+			} else {
+				s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n", proto, status, statusText, headers)
+				sb.WriteString(s)
+			}
+			sb.WriteString("=============::End::=================")
+			p.Logger.DEBUG(sb.String())
+			p.Logger.INFO("%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
 		}
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(bts))
-		writer := &CustomResponseWriter{ResponseWriter: c.Writer, body: &bytes.Buffer{}}
-		c.Writer = writer
-
-		c.Next()
-
-		latency := time.Since(start) / time.Millisecond
-		status := c.Writer.Status()
-		statusText := http.StatusText(status)
-		headers = p.headerString(c.Writer.Header())
-		ip := c.ClientIP()
-		size := c.Writer.Size()
-
-		bts = writer.body.Bytes()
-		if len(bts) > 0 {
-			s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts)
-			sb.WriteString(s)
-		} else {
-			s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n", proto, status, statusText, headers)
-			sb.WriteString(s)
-		}
-		sb.WriteString("=============::End::=================")
-		p.Logger.DEBUG(sb.String())
-		p.Logger.INFO("%-4s %3d %s %s %dms %d", method, status, path, ip, latency, size)
 	}
 }
 func (p *MiddlewareAccess) Order() int {
