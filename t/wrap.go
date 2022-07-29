@@ -86,6 +86,9 @@ func Time(val time.Time) *n.Time {
 }
 
 func Error(err error) *stackerror.Error {
+	if serr, ok := err.(*stackerror.Error); ok {
+		return serr
+	}
 	return stackerror.NewError(3, err)
 }
 
