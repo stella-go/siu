@@ -15,6 +15,7 @@
 package t
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/stella-go/siu/t/n"
@@ -89,6 +90,11 @@ func Error(err error) *stackerror.Error {
 	if serr, ok := err.(*stackerror.Error); ok {
 		return serr
 	}
+	return stackerror.NewError(3, err)
+}
+
+func Errorf(format string, a ...interface{}) *stackerror.Error {
+	err := fmt.Errorf(format, a...)
 	return stackerror.NewError(3, err)
 }
 

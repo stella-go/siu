@@ -16,6 +16,7 @@ package t
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -35,6 +36,11 @@ func err2() error {
 	err := fmt.Errorf("this is an error")
 	fmt.Printf("%v\n", err)
 	return Error(err)
+}
+
+func TestErrorf(t *testing.T) {
+	err := Errorf("Found an error: %v", errors.New("this is an error"))
+	fmt.Printf("%s\n", err)
 }
 
 func TestSuccess(t *testing.T) {
