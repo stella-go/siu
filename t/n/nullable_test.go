@@ -1322,6 +1322,13 @@ func TestString(t *testing.T) {
 		assertEquals(`{"Str":"abc"}`, string(bts))
 	}
 	{
+		bts, err := json.Marshal(&S{&String{`{"obj":{},"arr":[],"i":1,"str":"abc"}`}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertEquals(`{"Str":"{\"obj\":{},\"arr\":[],\"i\":1,\"str\":\"abc\"}"}`, string(bts))
+	}
+	{
 		bts, err := json.Marshal(&S{})
 		if err != nil {
 			t.Fatal(err)

@@ -1181,7 +1181,7 @@ type String struct {
 }
 
 func (p String) MarshalJSON() ([]byte, error) {
-	s := fmt.Sprintf("\"%s\"", p.Val)
+	s := strconv.Quote(p.Val)
 	return []byte(s), nil
 }
 func (p *String) UnmarshalJSON(data []byte) error {
@@ -1245,7 +1245,7 @@ type Time struct {
 }
 
 func (p Time) MarshalJSON() ([]byte, error) {
-	s := fmt.Sprintf("\"%s\"", p.Val.Format("2006-01-02 15:04:05"))
+	s := strconv.Quote(p.Val.Format("2006-01-02 15:04:05"))
 	return []byte(s), nil
 }
 func (p *Time) UnmarshalJSON(data []byte) error {
