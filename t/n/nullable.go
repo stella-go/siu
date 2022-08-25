@@ -1202,7 +1202,7 @@ func (p *String) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (p String) String() string {
-	return fmt.Sprintf("\"%s\"", p.Val)
+	return p.Val
 }
 func (p *String) Scan(value interface{}) error {
 	switch v := value.(type) {
