@@ -1,6 +1,6 @@
 # Create a Gin project with siu
 
-siu `/sjuː/ meaning very very fast` is an secondary packaging of the Gin Web Framework to quickly build enterprise-level Web applications.
+siu `/sjuː/ meaning very very fast` is an secondary packaging of the [Gin](https://github.com/gin-gonic/gin) Web Framework to quickly build enterprise-level Web applications.
 
 Siu quickly configures startup components through configuration files, such as rolling log, integrating component such as mysql, redis, zookeeper, CROS configuration, and support for history routing web applications. And also keeps open for extensions.
 
