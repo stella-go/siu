@@ -378,7 +378,7 @@ func convertString(value string, typ reflect.Type) (reflect.Value, error) {
 }
 
 func extractTag(tag string) (map[string]string, error) {
-	// tag example `@siu-inject:"name='abc',value='${a.b.c}',default='type',type='private'"`
+	// tag example `@siu:"name='abc',value='${a.b.c}',default='type',type='private'"`
 	r := make(map[string]string)
 
 	syntaxErr := fmt.Errorf("@siu inject tag syntax error: %s", tag)
