@@ -28,7 +28,7 @@ func (s *RequestBean[T]) String() string {
 type ResultBean[T any] struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
-	Data    T      `json:"data,omitempty"`
+	Data    T      `json:"data"`
 }
 
 func (s *ResultBean[T]) String() string {
