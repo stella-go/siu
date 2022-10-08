@@ -37,12 +37,12 @@ type CustomResponseWriter struct {
 	body *bytes.Buffer
 }
 
-func (w CustomResponseWriter) Write(b []byte) (int, error) {
+func (w *CustomResponseWriter) Write(b []byte) (int, error) {
 	w.body.Write(b)
 	return w.ResponseWriter.Write(b)
 }
 
-func (w CustomResponseWriter) WriteString(s string) (int, error) {
+func (w *CustomResponseWriter) WriteString(s string) (int, error) {
 	w.body.WriteString(s)
 	return w.ResponseWriter.WriteString(s)
 }
@@ -126,7 +126,10 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 				sb.WriteString(s)
 			}
 			sb.WriteString("=============::End::=================")
-			p.Logger.DEBUG(sb.String())
+
+			if _, ok := c.Get(ContextResourceKey); !ok {
+				p.Logger.DEBUG(sb.String())
+			}
 			p.Logger.INFO("%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
 		}
 	}

@@ -29,6 +29,8 @@ const (
 
 	ResourceMiddleDefaultPrefix = "/resources"
 	ResourceMiddleOrder         = 40
+
+	ContextResourceKey = "ResourcesKey"
 )
 
 type MiddlewareResource struct {
@@ -102,6 +104,7 @@ func Serve(prefix string, exclude string, fs ServeFileSystem) gin.HandlerFunc {
 		}
 		if fs.Exists(prefix, exclude, c.Request.URL.Path) {
 			fileserver.ServeHTTP(c.Writer, c.Request)
+			c.Set(ContextResourceKey, true)
 			c.Abort()
 		}
 	}
