@@ -1,4 +1,4 @@
-// Copyright 2010-2022 the original author or authors.
+// Copyright 2010-2023 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1307,10 +1307,10 @@ func TestString(t *testing.T) {
 		Str *String `json:"Str,omitempty"`
 	}
 	// assert string
-	assertEquals("{\"abc\"}", fmt.Sprintf("%s", S{&String{"abc"}}))
+	assertEquals("{abc}", fmt.Sprintf("%s", S{&String{"abc"}}))
 	assertEquals("{<nil>}", fmt.Sprintf("%s", S{}))
 
-	assertEquals("&{\"abc\"}", fmt.Sprintf("%s", &S{&String{"abc"}}))
+	assertEquals("&{abc}", fmt.Sprintf("%s", &S{&String{"abc"}}))
 	assertEquals("&{<nil>}", fmt.Sprintf("%s", &S{}))
 
 	// assert marshal json

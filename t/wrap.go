@@ -1,4 +1,4 @@
-// Copyright 2010-2022 the original author or authors.
+// Copyright 2010-2023 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,10 @@ func Int32(val int32) *n.Int32 {
 	return &n.Int32{Val: val}
 }
 
+func Rune(val rune) *n.Rune {
+	return &n.Rune{Val: val}
+}
+
 func Int64(val int64) *n.Int64 {
 	return &n.Int64{Val: val}
 }
@@ -48,6 +52,10 @@ func Uint(val uint) *n.Uint {
 
 func Uint8(val uint8) *n.Uint8 {
 	return &n.Uint8{Val: val}
+}
+
+func Byte(val byte) *n.Byte {
+	return &n.Byte{Val: val}
 }
 
 func Uint16(val uint16) *n.Uint16 {
@@ -96,6 +104,16 @@ func Error(err error) *stackerror.Error {
 func Errorf(format string, a ...interface{}) *stackerror.Error {
 	err := fmt.Errorf(format, a...)
 	return stackerror.NewError(3, err)
+}
+
+func AssertErrorNil(err error) {
+	if err == nil {
+		return
+	}
+	if serr, ok := err.(*stackerror.Error); ok {
+		panic(serr)
+	}
+	panic(stackerror.NewError(3, err))
 }
 
 func Success() *ResultBean[any] {

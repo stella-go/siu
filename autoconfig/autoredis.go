@@ -1,4 +1,4 @@
-// Copyright 2010-2022 the original author or authors.
+// Copyright 2010-2023 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,18 +25,6 @@ import (
 	"github.com/stella-go/siu/config"
 )
 
-/*
-	if !ok {
-		return nil, fmt.Errorf("reids address can not be empty")
-	}
-	password := conf.GetStringOr(prefix+".password", "")
-	db := conf.GetIntOr(prefix+".db", 0)
-	poolSize := conf.GetIntOr(prefix+".poolSize", 4)
-	minIdle := conf.GetIntOr(prefix+".maxIdle", 1)
-	dialTimeout := conf.GetIntOr(prefix+".dialTimeout", 5000)
-	readTimeout := conf.GetIntOr(prefix+".readTimeout", 5000)
-	writeTimeout := conf.GetIntOr(prefix+".writeTimeout", 5000)
-*/
 const (
 	RedisKey             = "redis"
 	RedisDisableKey      = RedisKey + ".disable"

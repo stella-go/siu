@@ -1,4 +1,4 @@
-// Copyright 2010-2022 the original author or authors.
+// Copyright 2010-2023 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,6 +82,7 @@ func (l *LocalFileSystem) Exists(prefix string, exclude string, filepath string)
 	}
 	return false
 }
+
 func (l *LocalFileSystem) Open(name string) (http.File, error) {
 	f, err := l.FileSystem.Open(name)
 	if err != nil {
@@ -98,7 +99,8 @@ func Serve(prefix string, exclude string, fs ServeFileSystem) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uri := c.Request.URL.Path
 		if (prefix != "" && prefix != "/") && (uri == "/" || uri == "/index.html") {
-			c.Redirect(http.StatusFound, prefix)
+			c.Request.URL.Path = prefix
+			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
 			return
 		}

@@ -1,4 +1,4 @@
-// Copyright 2010-2022 the original author or authors.
+// Copyright 2010-2023 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -25,9 +24,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type void struct{}
-
-var null void
+var null struct{}
 
 var (
 	env          *environment
@@ -36,8 +33,8 @@ var (
 )
 
 type environment struct {
-	files   *[]string
-	configs *[]map[interface{}]interface{}
+	files   []string
+	configs []map[interface{}]interface{}
 }
 
 func init() {
@@ -50,7 +47,7 @@ func init() {
 	maps := make([]map[interface{}]interface{}, 0)
 	for _, file := range names {
 		m := make(map[interface{}]interface{})
-		bts, err := ioutil.ReadFile(file)
+		bts, err := os.ReadFile(file)
 		if err != nil {
 			maps = append(maps, m)
 			continue
@@ -63,16 +60,14 @@ func init() {
 		maps = append(maps, m)
 		common.INFO("Load configuration file: %s success", file)
 	}
-	env = &environment{&names, &maps}
+	env = &environment{names, maps}
 }
 
 func LoadConfig(files ...string) {
 	rwLock.Lock()
 	defer rwLock.Unlock()
-	envFiles := *env.files
-	envConfigs := *env.configs
-	alreadyDone := make(map[string]void)
-	for _, f := range envFiles {
+	alreadyDone := make(map[string]struct{})
+	for _, f := range env.files {
 		alreadyDone[f] = null
 	}
 	maps := make([]map[interface{}]interface{}, 0)
@@ -81,7 +76,7 @@ func LoadConfig(files ...string) {
 			continue
 		}
 		m := make(map[interface{}]interface{})
-		bts, err := ioutil.ReadFile(file)
+		bts, err := os.ReadFile(file)
 		if err != nil {
 			maps = append(maps, m)
 			common.ERROR("Failed to read configuration file: %s, with error %v", file, err)
@@ -89,16 +84,14 @@ func LoadConfig(files ...string) {
 		}
 		err = yaml.Unmarshal(bts, &m)
 		if err != nil {
-			common.ERROR("Failed to unmarshal configuration file: %s, with error %v", file, err)
 			maps = append(maps, m)
+			common.ERROR("Failed to unmarshal configuration file: %s, with error %v", file, err)
 			continue
 		}
 		maps = append(maps, m)
 	}
-	fs := append(envFiles, files...)
-	cs := append(envConfigs, maps...)
-	env.files = &fs
-	env.configs = &cs
+	env.files = append(env.files, files...)
+	env.configs = append(env.configs, maps...)
 }
 
 func (p *environment) tryLoadOSEnv(key string) (interface{}, bool) {
@@ -119,7 +112,7 @@ func (p *environment) Get(key string) (interface{}, bool) {
 	if ok {
 		return value, ok
 	}
-	for _, config := range *p.configs {
+	for _, config := range p.configs {
 		value, ok := get(config, key)
 		if ok {
 			return value, true

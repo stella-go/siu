@@ -1,4 +1,4 @@
-// Copyright 2010-2022 the original author or authors.
+// Copyright 2010-2023 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package siu
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -197,7 +196,7 @@ func newDefaultContext() *context {
 
 func (c *context) banner() {
 	if bannerFile, ok := c.environment.GetString("banner.file"); ok {
-		bannerBts, err := ioutil.ReadFile(bannerFile)
+		bannerBts, err := os.ReadFile(bannerFile)
 		if err != nil {
 			c.logger.INFO(string(bannerBts))
 			return
@@ -265,6 +264,7 @@ func (p *buildinRegister) Named() map[string]interface{} {
 		"server":      p.c.server,
 	}
 }
+
 func (p *buildinRegister) Typed() map[reflect.Type]interface{} {
 	return map[reflect.Type]interface{}{
 		reflect.TypeOf((*config.TypedConfig)(nil)).Elem(): p.c.environment,
@@ -272,6 +272,7 @@ func (p *buildinRegister) Typed() map[reflect.Type]interface{} {
 		reflect.TypeOf((*gin.Engine)(nil)):                p.c.server,
 	}
 }
+
 func (p *buildinRegister) Order() int {
 	return BuildinRegisterOrder
 }

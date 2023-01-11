@@ -1,4 +1,4 @@
-// Copyright 2010-2022 the original author or authors.
+// Copyright 2010-2023 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ func (p Bool) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatBool(p.Val)
 	return []byte(s), nil
 }
+
 func (p *Bool) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -47,9 +48,11 @@ func (p *Bool) UnmarshalJSON(data []byte) error {
 	p.Val = value
 	return nil
 }
+
 func (p Bool) String() string {
 	return strconv.FormatBool(p.Val)
 }
+
 func (p *Bool) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -91,9 +94,11 @@ func (p *Bool) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Bool) Value() (driver.Value, error) {
 	return p.Val, nil
 }
+
 func (p Bool) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Bool:
@@ -114,6 +119,7 @@ func (p Int) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatInt(int64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Int) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -131,9 +137,11 @@ func (p *Int) UnmarshalJSON(data []byte) error {
 	p.Val = int(value)
 	return nil
 }
+
 func (p Int) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
+
 func (p *Int) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -167,9 +175,11 @@ func (p *Int) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Int) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Int) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int:
@@ -190,6 +200,7 @@ func (p Int8) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatInt(int64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Int8) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -207,9 +218,11 @@ func (p *Int8) UnmarshalJSON(data []byte) error {
 	p.Val = int8(value)
 	return nil
 }
+
 func (p Int8) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
+
 func (p *Int8) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -243,9 +256,11 @@ func (p *Int8) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Int8) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Int8) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int8:
@@ -266,6 +281,7 @@ func (p Int16) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatInt(int64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Int16) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -283,9 +299,11 @@ func (p *Int16) UnmarshalJSON(data []byte) error {
 	p.Val = int16(value)
 	return nil
 }
+
 func (p Int16) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
+
 func (p *Int16) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -319,9 +337,11 @@ func (p *Int16) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Int16) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Int16) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int16:
@@ -342,6 +362,7 @@ func (p Int32) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatInt(int64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Int32) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -359,9 +380,11 @@ func (p *Int32) UnmarshalJSON(data []byte) error {
 	p.Val = int32(value)
 	return nil
 }
+
 func (p Int32) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
+
 func (p *Int32) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -395,9 +418,11 @@ func (p *Int32) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Int32) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Int32) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int32:
@@ -421,6 +446,7 @@ func (p Int64) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatInt(p.Val, 10)
 	return []byte(s), nil
 }
+
 func (p *Int64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -438,9 +464,11 @@ func (p *Int64) UnmarshalJSON(data []byte) error {
 	p.Val = int64(value)
 	return nil
 }
+
 func (p Int64) String() string {
 	return strconv.FormatInt(p.Val, 10)
 }
+
 func (p *Int64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -474,9 +502,11 @@ func (p *Int64) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Int64) Value() (driver.Value, error) {
 	return p.Val, nil
 }
+
 func (p Int64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Int64:
@@ -497,6 +527,7 @@ func (p Uint) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatUint(uint64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Uint) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -514,9 +545,11 @@ func (p *Uint) UnmarshalJSON(data []byte) error {
 	p.Val = uint(value)
 	return nil
 }
+
 func (p Uint) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
+
 func (p *Uint) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -550,9 +583,11 @@ func (p *Uint) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Uint) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Uint) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint:
@@ -573,6 +608,7 @@ func (p Uint8) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatUint(uint64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Uint8) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -590,9 +626,11 @@ func (p *Uint8) UnmarshalJSON(data []byte) error {
 	p.Val = uint8(value)
 	return nil
 }
+
 func (p Uint8) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
+
 func (p *Uint8) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -626,9 +664,11 @@ func (p *Uint8) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Uint8) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Uint8) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint8:
@@ -652,6 +692,7 @@ func (p Uint16) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatUint(uint64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Uint16) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -669,9 +710,11 @@ func (p *Uint16) UnmarshalJSON(data []byte) error {
 	p.Val = uint16(value)
 	return nil
 }
+
 func (p Uint16) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
+
 func (p *Uint16) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -705,9 +748,11 @@ func (p *Uint16) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Uint16) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Uint16) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint16:
@@ -728,6 +773,7 @@ func (p Uint32) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatUint(uint64(p.Val), 10)
 	return []byte(s), nil
 }
+
 func (p *Uint32) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -745,9 +791,11 @@ func (p *Uint32) UnmarshalJSON(data []byte) error {
 	p.Val = uint32(value)
 	return nil
 }
+
 func (p Uint32) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
+
 func (p *Uint32) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -781,9 +829,11 @@ func (p *Uint32) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Uint32) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Uint32) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint32:
@@ -804,6 +854,7 @@ func (p Uint64) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatUint(p.Val, 10)
 	return []byte(s), nil
 }
+
 func (p *Uint64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -821,9 +872,11 @@ func (p *Uint64) UnmarshalJSON(data []byte) error {
 	p.Val = uint64(value)
 	return nil
 }
+
 func (p Uint64) String() string {
 	return strconv.FormatUint(p.Val, 10)
 }
+
 func (p *Uint64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -857,9 +910,11 @@ func (p *Uint64) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Uint64) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
+
 func (p Uint64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Uint64:
@@ -880,6 +935,7 @@ func (p Float32) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatFloat(float64(p.Val), 'f', -1, 32)
 	return []byte(s), nil
 }
+
 func (p *Float32) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -897,9 +953,11 @@ func (p *Float32) UnmarshalJSON(data []byte) error {
 	p.Val = float32(value)
 	return nil
 }
+
 func (p Float32) String() string {
 	return strconv.FormatFloat(float64(p.Val), 'f', -1, 32)
 }
+
 func (p *Float32) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -933,9 +991,11 @@ func (p *Float32) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Float32) Value() (driver.Value, error) {
 	return float64(p.Val), nil
 }
+
 func (p Float32) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Float32:
@@ -956,6 +1016,7 @@ func (p Float64) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatFloat(float64(p.Val), 'f', -1, 32)
 	return []byte(s), nil
 }
+
 func (p *Float64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -973,9 +1034,11 @@ func (p *Float64) UnmarshalJSON(data []byte) error {
 	p.Val = float64(value)
 	return nil
 }
+
 func (p Float64) String() string {
 	return strconv.FormatFloat(float64(p.Val), 'f', -1, 32)
 }
+
 func (p *Float64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -1009,9 +1072,11 @@ func (p *Float64) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Float64) Value() (driver.Value, error) {
 	return float64(p.Val), nil
 }
+
 func (p Float64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Float64:
@@ -1032,6 +1097,7 @@ func (p Complex64) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatComplex(complex128(p.Val), 'f', -1, 64)
 	return []byte(s), nil
 }
+
 func (p *Complex64) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -1049,9 +1115,11 @@ func (p *Complex64) UnmarshalJSON(data []byte) error {
 	p.Val = complex64(value)
 	return nil
 }
+
 func (p Complex64) String() string {
 	return strconv.FormatComplex(complex128(p.Val), 'f', -1, 64)
 }
+
 func (p *Complex64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -1085,9 +1153,11 @@ func (p *Complex64) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Complex64) Value() (driver.Value, error) {
 	return strconv.FormatComplex(complex128(p.Val), 'f', -1, 64), nil
 }
+
 func (p Complex64) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Complex64:
@@ -1108,6 +1178,7 @@ func (p Complex128) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatComplex(p.Val, 'f', -1, 64)
 	return []byte(s), nil
 }
+
 func (p *Complex128) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -1125,9 +1196,11 @@ func (p *Complex128) UnmarshalJSON(data []byte) error {
 	p.Val = value
 	return nil
 }
+
 func (p Complex128) String() string {
 	return strconv.FormatComplex(p.Val, 'f', -1, 64)
 }
+
 func (p *Complex128) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -1161,9 +1234,11 @@ func (p *Complex128) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Complex128) Value() (driver.Value, error) {
 	return strconv.FormatComplex(p.Val, 'f', -1, 64), nil
 }
+
 func (p Complex128) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Complex128:
@@ -1184,6 +1259,7 @@ func (p String) MarshalJSON() ([]byte, error) {
 	s := strconv.Quote(p.Val)
 	return []byte(s), nil
 }
+
 func (p *String) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -1201,9 +1277,11 @@ func (p *String) UnmarshalJSON(data []byte) error {
 	p.Val = value
 	return nil
 }
+
 func (p String) String() string {
 	return p.Val
 }
+
 func (p *String) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -1225,9 +1303,11 @@ func (p *String) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p String) Value() (driver.Value, error) {
 	return p.Val, nil
 }
+
 func (p String) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case String:
@@ -1248,6 +1328,7 @@ func (p Time) MarshalJSON() ([]byte, error) {
 	s := strconv.Quote(p.Val.Format("2006-01-02 15:04:05"))
 	return []byte(s), nil
 }
+
 func (p *Time) UnmarshalJSON(data []byte) error {
 	if data == nil {
 		p = nil
@@ -1270,9 +1351,11 @@ func (p *Time) UnmarshalJSON(data []byte) error {
 	p.Val = tm
 	return nil
 }
+
 func (p Time) String() string {
 	return p.Val.String()
 }
+
 func (p *Time) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
@@ -1302,9 +1385,11 @@ func (p *Time) Scan(value interface{}) error {
 	}
 	return nil
 }
+
 func (p Time) Value() (driver.Value, error) {
 	return p.Val, nil
 }
+
 func (p Time) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Time:
@@ -1315,6 +1400,7 @@ func (p Time) Equals(o interface{}) bool {
 		return false
 	}
 }
+
 func (p *Time) Round(d time.Duration) *Time {
 	p.Val = p.Val.Round(d)
 	return p
