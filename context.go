@@ -143,7 +143,6 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 	if leveledLogger, ok := contextLogger.(interfaces.LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())
 	}
-	ctx.banner()
 	return ctx
 }
 
@@ -176,12 +175,7 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 		common.INFO("use buildin logger")
 	}
 
-	mode := environment.GetStringOr("server.mode", "release")
-	gin.SetMode(mode)
-	server := gin.New()
-	server.SetTrustedProxies(nil)
-
-	ctx := newContext(environment, contextLogger, server)
+	ctx := newContext(environment, contextLogger, nil)
 	ctx.Register(&buildinRegister{ctx})
 	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{})
 	ctx.Use(&middleware.MiddlewareAccess{}, &middleware.MiddlewareCROS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{})
@@ -320,6 +314,15 @@ func (c *context) register() {
 }
 
 func (c *context) Run() {
+	ctx.banner()
+
+	if c.server == nil {
+		mode := c.environment.GetStringOr("server.mode", "release")
+		gin.SetMode(mode)
+		c.server = gin.New()
+		c.server.SetTrustedProxies(nil)
+	}
+
 	c.register()
 
 	resolver := &resolver{c.environment}

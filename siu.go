@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stella-go/siu/common"
 	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/interfaces"
 )
@@ -50,23 +51,35 @@ func Default() {
 }
 
 func DEBUG(format string, arr ...interface{}) {
-	Default()
-	ctx.DEBUG(format, arr...)
+	if ctx == nil {
+		common.DEBUG(format, arr...)
+	} else {
+		ctx.DEBUG(format, arr...)
+	}
 }
 
 func INFO(format string, arr ...interface{}) {
-	Default()
-	ctx.INFO(format, arr...)
+	if ctx == nil {
+		common.INFO(format, arr...)
+	} else {
+		ctx.INFO(format, arr...)
+	}
 }
 
 func WARN(format string, arr ...interface{}) {
-	Default()
-	ctx.WARN(format, arr...)
+	if ctx == nil {
+		common.WARN(format, arr...)
+	} else {
+		ctx.WARN(format, arr...)
+	}
 }
 
 func ERROR(format string, arr ...interface{}) {
-	Default()
-	ctx.ERROR(format, arr...)
+	if ctx == nil {
+		common.ERROR(format, arr...)
+	} else {
+		ctx.ERROR(format, arr...)
+	}
 }
 
 func Register(registers ...interfaces.InjectRegister) {

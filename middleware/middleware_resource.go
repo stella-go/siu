@@ -101,6 +101,7 @@ func Serve(prefix string, exclude string, fs ServeFileSystem) gin.HandlerFunc {
 		if (prefix != "" && prefix != "/") && (uri == "/" || uri == "/index.html") {
 			c.Request.URL.Path = prefix
 			fileserver.ServeHTTP(c.Writer, c.Request)
+			c.Set(ContextResourceKey, true)
 			c.Abort()
 			return
 		}

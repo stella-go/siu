@@ -71,7 +71,7 @@ func GetNamed(name string) (interface{}, bool) {
 func Inject(r ValueResolver, obj interface{}) error {
 	defer func() {
 		if err := recover(); err != nil {
-			common.ERROR("panic: %v", err)
+			common.ERROR("panic:", err)
 			panic(err)
 		}
 	}()
@@ -95,7 +95,7 @@ func inject(r ValueResolver, obj interface{}) error {
 		fieldValue := refValue.Field(i)
 		err := setValue(r, fieldType, fieldValue)
 		if err != nil {
-			common.ERROR("Inject field %s.%s with error: %v", refType, fieldType.Name, err)
+			common.ERROR("Inject field %s.%s with error:", refType, fieldType.Name, err)
 			return err
 		}
 	}

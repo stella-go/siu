@@ -27,9 +27,10 @@ import (
 var null struct{}
 
 var (
-	env          *environment
-	defaultFiles = []string{"application.yml", "config/application.yml"}
+	once         = &sync.Once{}
 	rwLock       = &sync.RWMutex{}
+	defaultFiles = []string{"application.yml", "config/application.yml"}
+	env          = &environment{files: make([]string, 0), configs: make([]map[interface{}]interface{}, 0)}
 )
 
 type environment struct {
@@ -37,30 +38,31 @@ type environment struct {
 	configs []map[interface{}]interface{}
 }
 
-func init() {
-	names := defaultFiles
+func tryLoadConfig(files ...string) {
 	envConfigFiles := os.Getenv("STELLA_CONFIG_FILES")
 	if envConfigFiles != "" {
-		files := strings.Split(envConfigFiles, ",")
-		names = append(files, names...)
+		envFiles := strings.Split(envConfigFiles, ",")
+		LoadConfig(envFiles...)
 	}
+
+	names := make([]string, 0)
 	maps := make([]map[interface{}]interface{}, 0)
-	for _, file := range names {
+	for _, file := range files {
 		m := make(map[interface{}]interface{})
 		bts, err := os.ReadFile(file)
 		if err != nil {
-			maps = append(maps, m)
 			continue
 		}
 		err = yaml.Unmarshal(bts, &m)
 		if err != nil {
-			maps = append(maps, m)
 			continue
 		}
+		names = append(names, file)
 		maps = append(maps, m)
 		common.INFO("Load configuration file: %s success", file)
 	}
-	env = &environment{names, maps}
+	env.files = append(env.files, names...)
+	env.configs = append(env.configs, maps...)
 }
 
 func LoadConfig(files ...string) {
@@ -70,27 +72,29 @@ func LoadConfig(files ...string) {
 	for _, f := range env.files {
 		alreadyDone[f] = null
 	}
+	names := make([]string, 0)
 	maps := make([]map[interface{}]interface{}, 0)
 	for _, file := range files {
 		if _, done := alreadyDone[file]; done {
+			common.WARN("Already load configuration file: %s", file)
 			continue
 		}
 		m := make(map[interface{}]interface{})
 		bts, err := os.ReadFile(file)
 		if err != nil {
-			maps = append(maps, m)
-			common.ERROR("Failed to read configuration file: %s, with error %v", file, err)
+			common.ERROR("Failed to read configuration file: %s, with error", file, err)
 			continue
 		}
 		err = yaml.Unmarshal(bts, &m)
 		if err != nil {
-			maps = append(maps, m)
-			common.ERROR("Failed to unmarshal configuration file: %s, with error %v", file, err)
+			common.ERROR("Failed to unmarshal configuration file: %s, with error", file, err)
 			continue
 		}
+		names = append(names, file)
 		maps = append(maps, m)
+		common.INFO("Load configuration file: %s success", file)
 	}
-	env.files = append(env.files, files...)
+	env.files = append(env.files, names...)
 	env.configs = append(env.configs, maps...)
 }
 
@@ -106,6 +110,9 @@ func (p *environment) tryLoadOSEnv(key string) (interface{}, bool) {
 }
 
 func (p *environment) Get(key string) (interface{}, bool) {
+	once.Do(func() {
+		tryLoadConfig(defaultFiles...)
+	})
 	rwLock.RLock()
 	defer rwLock.RUnlock()
 	value, ok := p.tryLoadOSEnv(key)
@@ -132,7 +139,7 @@ func (p *environment) GetInt(key string) (int, bool) {
 	case string:
 		intValue, err := strconv.ParseInt(value, 0, 0)
 		if err != nil {
-			common.ERROR("Failed to get configuration: %s=%s, with error %v", key, value, err)
+			common.ERROR("Failed to get configuration: %s=%s, with error", key, value, err)
 			return 0, false
 		}
 		return int(intValue), true
@@ -178,7 +185,7 @@ func (p *environment) GetBool(key string) (bool, bool) {
 	case string:
 		boolValue, err := strconv.ParseBool(value)
 		if err != nil {
-			common.ERROR("Failed to get configuration: %s=%s, with error %v", key, value, err)
+			common.ERROR("Failed to get configuration: %s=%s, with error", key, value, err)
 			return false, false
 		}
 		return boolValue, true
@@ -329,7 +336,7 @@ func (p *DecryptEnvironment) GetString(key string) (string, bool) {
 	}
 	if value, ok := env.GetString(key); ok {
 		if srcVal, err := p.Cipher.Decrypt(value); err != nil {
-			common.ERROR("Failed to decrypt configuration: %s=%s, with error %v", key, value, err)
+			common.ERROR("Failed to decrypt configuration: %s=%s, with error", key, value, err)
 			return "", false
 		} else {
 			return srcVal, ok
@@ -357,7 +364,7 @@ func (p *DecryptEnvironment) GetStringOr(key string, defaultValue string) string
 	}
 	value := env.GetStringOr(key, defaultValue)
 	if srcVal, err := p.Cipher.Decrypt(value); err != nil {
-		common.ERROR("Failed to decrypt configuration: %s=%s, with error %v", key, value, err)
+		common.ERROR("Failed to decrypt configuration: %s=%s, with error", key, value, err)
 		return defaultValue
 	} else {
 		return srcVal

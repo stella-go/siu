@@ -31,33 +31,49 @@ func SetLevel(lv logger.Level) {
 }
 
 func DEBUG(format string, v ...interface{}) {
-	if level > logger.DebugLevel {
-		return
+	if level <= logger.DebugLevel {
+		if len(v) > 0 {
+			if _, ok := v[len(v)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, v...)
+		log.Output(2, "DEBUG - [SIU] "+msg)
 	}
-	msg := fmt.Sprintf(format, v...)
-	log.Output(2, "DEBUG - [SIU] "+msg)
 }
 
 func INFO(format string, v ...interface{}) {
-	if level > logger.InfoLevel {
-		return
+	if level <= logger.InfoLevel {
+		if len(v) > 0 {
+			if _, ok := v[len(v)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, v...)
+		log.Output(2, "INFO  - [SIU] "+msg)
 	}
-	msg := fmt.Sprintf(format, v...)
-	log.Output(2, "INFO  - [SIU] "+msg)
 }
 
 func WARN(format string, v ...interface{}) {
-	if level > logger.WarnLevel {
-		return
+	if level <= logger.WarnLevel {
+		if len(v) > 0 {
+			if _, ok := v[len(v)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, v...)
+		log.Output(2, "WARN  - [SIU] "+msg)
 	}
-	msg := fmt.Sprintf(format, v...)
-	log.Output(2, "WARN  - [SIU] "+msg)
 }
 
 func ERROR(format string, v ...interface{}) {
-	if level > logger.ErrorLevel {
-		return
+	if level <= logger.ErrorLevel {
+		if len(v) > 0 {
+			if _, ok := v[len(v)-1].(error); ok {
+				format += " %v"
+			}
+		}
+		msg := fmt.Sprintf(format, v...)
+		log.Output(2, "ERROR - [SIU] "+msg)
 	}
-	msg := fmt.Sprintf(format, v...)
-	log.Output(2, "ERROR - [SIU] "+msg)
 }
