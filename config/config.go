@@ -154,6 +154,9 @@ func (p *environment) GetString(key string) (string, bool) {
 	if !ok {
 		return "", false
 	}
+	if value == nil {
+		return "", true
+	}
 	switch value := value.(type) {
 	case string:
 		return value, true
