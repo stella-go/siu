@@ -340,7 +340,7 @@ func (p *DecryptEnvironment) GetString(key string) (string, bool) {
 	if value, ok := env.GetString(key); ok {
 		if srcVal, err := p.Cipher.Decrypt(value); err != nil {
 			common.ERROR("Failed to decrypt configuration: %s=%s, with error", key, value, err)
-			return "", false
+			panic(err)
 		} else {
 			return srcVal, ok
 		}
