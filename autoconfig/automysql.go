@@ -119,10 +119,10 @@ func createDB(conf config.TypedConfig, prefix string) (*sql.DB, error) {
 	dbName, ok4 := conf.GetString(prefix + ".dbName")
 
 	if !ok1 || !ok2 || !ok3 || !ok4 {
-		if prefix == MySQLDatasourceKey {
-			return nil, nil
+		if ok1 || ok2 || ok3 || ok4 {
+			return nil, fmt.Errorf("mysql datasource user/passwd/addr/dbName can not be empty")
 		}
-		return nil, fmt.Errorf("mysql datasource user/passwd/addr/dbName can not be empty")
+		return nil, nil
 	}
 
 	collation := conf.GetStringOr(prefix+".collation", "utf8mb4_bin")
