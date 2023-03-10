@@ -337,7 +337,7 @@ func (c *context) Run() {
 			common.DEBUG("%s is starting", a.Name())
 			err := a.OnStart()
 			if err != nil {
-				common.ERROR("%v", err)
+				common.ERROR("", err)
 				panic(err)
 			}
 			common.DEBUG("%s is start", a.Name())
@@ -364,7 +364,7 @@ func (c *context) Run() {
 				common.DEBUG("%s is stoping", fs[i].Name())
 				err := fs[i].OnStop()
 				if err != nil {
-					common.ERROR("%v", err)
+					common.ERROR("", err)
 				}
 				common.DEBUG("%s is stop", fs[i].Name())
 			}
