@@ -109,7 +109,7 @@ func (p *buildinLogger) WARN(format string, arr ...interface{}) {
 }
 
 func (p *buildinLogger) ERROR(format string, arr ...interface{}) {
-	if p.logLevel < logger.ErrorLevel {
+	if p.logLevel <= logger.ErrorLevel {
 		if len(arr) > 0 {
 			if _, ok := arr[len(arr)-1].(error); ok {
 				format += " %v"
