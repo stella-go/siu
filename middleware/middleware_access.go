@@ -128,7 +128,7 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			sb.WriteString("=============::End::=================")
 
 			if _, ok := c.Get(ContextResourceKey); !ok {
-				p.Logger.DEBUG(sb.String())
+				p.Logger.DEBUG("%s", sb.String())
 			}
 			p.Logger.INFO("%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
 		}
