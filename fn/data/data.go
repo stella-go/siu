@@ -147,71 +147,15 @@ func Update[T any](db *sql.DB, s *T) (int64, error) {
 		set = append(set, fmt.Sprintf("`%s` = ?", column))
 		args = append(args, v)
 	}
+	if len(where) == 0 {
+		return 0, fmt.Errorf("primary not found, where condition empty")
+	}
 	SQL = fmt.Sprintf(SQL, table, strings.Join(set, ", "), strings.Join(where, ", "))
 	ret, err := db.Exec(SQL, append(args, whereArgs...)...)
 	if err != nil {
 		return 0, err
 	}
 	return ret.RowsAffected()
-}
-
-func QueryById[T any](db *sql.DB, s *T) (*T, error) {
-	if s == nil {
-		return nil, fmt.Errorf("pointer is nil")
-	}
-	rt := reflect.TypeOf(s)
-	rv := reflect.ValueOf(s)
-	if rt.Kind() == reflect.Pointer {
-		rt = rt.Elem()
-	}
-	if rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	table := toSnakeCase(rt.Name())
-	where := make([]string, 0)
-	whereArgs := make([]interface{}, 0)
-	SQL := "select * from `%s` where %s limit 1"
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-		tag, err := extractTag(f.Tag.Get(tag_free))
-		if err != nil {
-			return nil, err
-		}
-		if value, ok := tag[ignore]; ok && value == s_true {
-			continue
-		}
-		if value, ok := tag[table]; ok {
-			table = value
-		}
-		if value, ok := tag[primary]; ok && value == s_true {
-			var column string
-			if value, ok := tag["column"]; ok {
-				column = value
-			} else {
-				column = toSnakeCase(f.Name)
-			}
-			fv := rv.Field(i)
-			if fv.IsNil() {
-				return nil, fmt.Errorf("primary %s is empty", column)
-			}
-			v := roundIfTime(fv.Interface(), tag[round])
-			where = append(where, fmt.Sprintf("`%s` = ?", column))
-			whereArgs = append(whereArgs, v)
-		}
-	}
-	ret, scan, err := newScan[T](rt)
-	if err != nil {
-		return nil, err
-	}
-	SQL = fmt.Sprintf(SQL, table, strings.Join(where, ", "))
-	err = db.QueryRow(SQL, whereArgs...).Scan(scan...)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			return nil, err
-		}
-		return nil, nil
-	}
-	return ret, nil
 }
 
 func Query[T any](db *sql.DB, s *T) (*T, error) {
@@ -384,7 +328,7 @@ func newScan[T any](rt reflect.Type) (*T, []interface{}, error) {
 	return s, scan, nil
 }
 
-func DeleteById[T any](db *sql.DB, s *T) (int64, error) {
+func Delete[T any](db *sql.DB, s *T) (int64, error) {
 	if s == nil {
 		return 0, fmt.Errorf("pointer is nil")
 	}
