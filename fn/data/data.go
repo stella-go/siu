@@ -98,9 +98,9 @@ func Create[T any](db *sql.DB, s *T) (int64, error) {
 	return ret.LastInsertId()
 }
 
-func Update[T any](db *sql.DB, s *T) error {
+func Update[T any](db *sql.DB, s *T) (int64, error) {
 	if s == nil {
-		return fmt.Errorf("pointer is nil")
+		return 0, fmt.Errorf("pointer is nil")
 	}
 	rt := reflect.TypeOf(s)
 	rv := reflect.ValueOf(s)
@@ -120,7 +120,7 @@ func Update[T any](db *sql.DB, s *T) error {
 		f := rt.Field(i)
 		tag, err := extractTag(f.Tag.Get(tag_free))
 		if err != nil {
-			return err
+			return 0, err
 		}
 		if value, ok := tag[ignore]; ok && value == s_true {
 			continue
@@ -150,13 +150,9 @@ func Update[T any](db *sql.DB, s *T) error {
 	SQL = fmt.Sprintf(SQL, table, strings.Join(set, ", "), strings.Join(where, ", "))
 	ret, err := db.Exec(SQL, append(args, whereArgs...)...)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = ret.RowsAffected()
-	if err != nil {
-		return err
-	}
-	return nil
+	return ret.RowsAffected()
 }
 
 func QueryById[T any](db *sql.DB, s *T) (*T, error) {
@@ -388,9 +384,9 @@ func newScan[T any](rt reflect.Type) (*T, []interface{}, error) {
 	return s, scan, nil
 }
 
-func DeleteById[T any](db *sql.DB, s *T) error {
+func DeleteById[T any](db *sql.DB, s *T) (int64, error) {
 	if s == nil {
-		return fmt.Errorf("pointer is nil")
+		return 0, fmt.Errorf("pointer is nil")
 	}
 	rt := reflect.TypeOf(s)
 	rv := reflect.ValueOf(s)
@@ -408,7 +404,7 @@ func DeleteById[T any](db *sql.DB, s *T) error {
 		f := rt.Field(i)
 		tag, err := extractTag(f.Tag.Get(tag_free))
 		if err != nil {
-			return err
+			return 0, err
 		}
 		if value, ok := tag[ignore]; ok && value == s_true {
 			continue
@@ -425,7 +421,7 @@ func DeleteById[T any](db *sql.DB, s *T) error {
 			}
 			fv := rv.Field(i)
 			if fv.IsNil() {
-				return fmt.Errorf("primary %s is empty", column)
+				return 0, fmt.Errorf("primary %s is empty", column)
 			}
 			v := roundIfTime(fv.Interface(), tag[round])
 			where = append(where, fmt.Sprintf("`%s` = ?", column))
@@ -433,18 +429,14 @@ func DeleteById[T any](db *sql.DB, s *T) error {
 		}
 	}
 	if len(where) == 0 {
-		return fmt.Errorf("primary not found, where condition empty")
+		return 0, fmt.Errorf("primary not found, where condition empty")
 	}
 	SQL = fmt.Sprintf(SQL, table, strings.Join(where, ", "))
 	ret, err := db.Exec(SQL, whereArgs...)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = ret.RowsAffected()
-	if err != nil {
-		return err
-	}
-	return nil
+	return ret.RowsAffected()
 }
 
 func roundIfTime(v interface{}, round string) interface{} {
