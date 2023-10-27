@@ -131,11 +131,3 @@ func Fail() *ResultBean[any] {
 func FailWith(code int, message string) *ResultBean[any] {
 	return &ResultBean[any]{Code: code, Message: message}
 }
-
-func IfElse[T any](b bool, t T, f T) T {
-	if b {
-		return t
-	} else {
-		return f
-	}
-}
