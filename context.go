@@ -20,7 +20,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path"
 	"reflect"
 	"sort"
 	"strings"
@@ -392,9 +391,10 @@ func (c *context) Run() {
 		}
 	}
 	prefix := c.environment.GetStringOr("server.prefix", "")
+	base := c.server.Group(prefix)
 	for _, router := range c.routers {
 		rs := router.Router()
-		group := c.server.Group("")
+		group := base.Group("")
 		if mr, ok := router.(interfaces.MiddlewareRouter); ok {
 			if ms := mr.Middleware(); ms != nil {
 				group.Use(ms...)
@@ -404,7 +404,7 @@ func (c *context) Run() {
 			tokens := strings.Split(name, " ")
 			methods := strings.Split(tokens[0], ",")
 			for _, method := range methods {
-				group.Handle(strings.ToUpper(method), path.Join(prefix, tokens[1]), function)
+				group.Handle(strings.ToUpper(method), tokens[1], function)
 			}
 		}
 	}

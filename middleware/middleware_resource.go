@@ -16,6 +16,7 @@ package middleware
 
 import (
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -23,9 +24,11 @@ import (
 )
 
 const (
-	ResourceMiddlePrefixKey  = "middleware.resource.prefix"
-	ResourceMiddleExcludeKey = "middleware.resource.exclude"
-	ResourceMiddleDisableKey = "middleware.resource.disable"
+	ServerPrefix                   = "server.prefix"
+	ResourceMiddlePrefixKey        = "middleware.resource.prefix"
+	ResourceMiddleExcludeKey       = "middleware.resource.exclude"
+	ResourceMiddleIndexNotFoundKey = "middleware.resource.index-not-found"
+	ResourceMiddleDisableKey       = "middleware.resource.disable"
 
 	ResourceMiddleDefaultPrefix = "/resources"
 	ResourceMiddleOrder         = 40
@@ -45,7 +48,9 @@ func (p *MiddlewareResource) Condition() bool {
 }
 
 func (p *MiddlewareResource) Function() gin.HandlerFunc {
-	prefix := p.Conf.GetStringOr(ResourceMiddlePrefixKey, ResourceMiddleDefaultPrefix)
+	serverPrefix := p.Conf.GetStringOr(ServerPrefix, "")
+	resourcePrefix := p.Conf.GetStringOr(ResourceMiddlePrefixKey, ResourceMiddleDefaultPrefix)
+	prefix := path.Join(serverPrefix, resourcePrefix)
 	exclude := p.Conf.GetStringOr(ResourceMiddleExcludeKey, "")
 	return Serve(prefix, exclude, LocalFile("resources", true))
 }
