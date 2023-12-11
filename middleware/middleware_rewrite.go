@@ -55,7 +55,7 @@ func (p *MiddlewareRewrite) Init() {
 }
 
 func (p *MiddlewareRewrite) Condition() bool {
-	if v := p.Conf.GetBoolOr(AccessMiddleDisableKey, true); v {
+	if v := p.Conf.GetBoolOr(RewriteMiddleDisableKey, true); v {
 		return false
 	}
 	return true
