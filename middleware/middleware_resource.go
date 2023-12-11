@@ -53,7 +53,8 @@ func (p *MiddlewareResource) Function() gin.HandlerFunc {
 	prefix := path.Join(serverPrefix, resourcePrefix)
 	resourceExclude := p.Conf.GetStringOr(ResourceMiddleExcludeKey, "")
 	exclude := path.Join(serverPrefix, resourceExclude)
-	return Serve(prefix, exclude, LocalFile("resources", true))
+	indexNotFound := p.Conf.GetBoolOr(ResourceMiddleIndexNotFoundKey, false)
+	return Serve(prefix, exclude, indexNotFound, LocalFile("resources", true))
 }
 
 func (p *MiddlewareResource) Order() int {
@@ -97,7 +98,7 @@ func (l *LocalFileSystem) Open(name string) (http.File, error) {
 	return f, err
 }
 
-func Serve(prefix string, exclude string, fs ServeFileSystem) gin.HandlerFunc {
+func Serve(prefix string, exclude string, indexNotFound bool, fs ServeFileSystem) gin.HandlerFunc {
 	fileserver := http.FileServer(fs)
 	if prefix != "" {
 		fileserver = http.StripPrefix(prefix, fileserver)
@@ -115,6 +116,14 @@ func Serve(prefix string, exclude string, fs ServeFileSystem) gin.HandlerFunc {
 			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Set(ContextResourceKey, true)
 			c.Abort()
+			return
+		}
+		if c.FullPath() == "" && indexNotFound {
+			c.Request.URL.Path = prefix
+			fileserver.ServeHTTP(c.Writer, c.Request)
+			c.Set(ContextResourceKey, true)
+			c.Abort()
+			return
 		}
 	}
 }
