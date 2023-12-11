@@ -51,7 +51,8 @@ func (p *MiddlewareResource) Function() gin.HandlerFunc {
 	serverPrefix := p.Conf.GetStringOr(ServerPrefix, "")
 	resourcePrefix := p.Conf.GetStringOr(ResourceMiddlePrefixKey, ResourceMiddleDefaultPrefix)
 	prefix := path.Join(serverPrefix, resourcePrefix)
-	exclude := p.Conf.GetStringOr(ResourceMiddleExcludeKey, "")
+	resourceExclude := p.Conf.GetStringOr(ResourceMiddleExcludeKey, "")
+	exclude := path.Join(serverPrefix, resourceExclude)
 	return Serve(prefix, exclude, LocalFile("resources", true))
 }
 
