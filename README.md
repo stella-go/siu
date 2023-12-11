@@ -218,13 +218,22 @@ type Service struct {
 ## Middleware Related Configuration
 ```yml
 middleware:
+  rewrite:
+    disable: false  # Set whether to disable path rewrite, default true
+    match: "^/something(/|$)(.*)" # Set match regexp
+    rewrite: "/$2" # Set replace repl
   access.disable: false # Set whether to disable access logging, default false
   cros:
     disable: false # Set whether to disable CROS, default false
     wildcard: false # Set whether to enable wildcards, default true
     expose: "*" # Set "Access-Control-Expose-Headers", separated by commas, default "*"
   error-log.disable: false # Set whether to disable error logging, default false
-  resource.disable: false # Set whether to disable resources serve, default false
+  resource:
+    disable: false # Set whether to disable resources serve, default false
+    prefix: "/resources" # Set resources path prefix, default "/resources"
+    index-not-found: false # Set whether to index when router not found, default false
+  session.disable: false # Set whether to disable session middleware, default true
+
 ```
 
 ## Custom Injection
@@ -287,7 +296,7 @@ All struct pointers registered in siu will perform dependency injection. All fie
     // This will look for the object of name "bar" and set to `nil` if it is not found
     Bav      *Bar              `@siu:"name='bar',default='zero'"`
     // This will look for the object of name "bar", and then look for the object type `*Bar`
-    // If neither is found, an object of type type will be created and its name and type will be stored for use in the next search
+    // If neither is found, an object of type `*Bar` will be created and its name and type will be stored for use in the next search
     Baw      *Bar              `@siu:"name='bar',default='type'"`
   }
   ```
