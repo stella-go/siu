@@ -69,7 +69,7 @@ func (p *MiddlewareSession) Init() {
 }
 
 func (p *MiddlewareSession) Condition() bool {
-	if v, ok := p.Conf.GetBool(ErrorlogMiddleDisableKey); ok && v {
+	if v, ok := p.Conf.GetBool(SessionDisableKey); ok && v {
 		return false
 	}
 	return true
