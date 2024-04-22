@@ -107,6 +107,7 @@ func Serve(prefix string, exclude string, indexNotFound bool, fs ServeFileSystem
 		uri := c.Request.URL.Path
 		if (prefix != "" && prefix != "/") && (uri == "/" || uri == "/index.html") {
 			c.Request.URL.Path = prefix
+			c.Request.RequestURI = prefix
 			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Set(ContextResourceKey, true)
 			c.Abort()
@@ -120,6 +121,7 @@ func Serve(prefix string, exclude string, indexNotFound bool, fs ServeFileSystem
 		}
 		if c.FullPath() == "" && indexNotFound {
 			c.Request.URL.Path = prefix
+			c.Request.RequestURI = prefix
 			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Set(ContextResourceKey, true)
 			c.Abort()
