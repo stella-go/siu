@@ -232,6 +232,7 @@ middleware:
     disable: false # Set whether to disable resources serve, default false
     prefix: "/resources" # Set resources path prefix, default "/resources"
     index-not-found: false # Set whether to index when router not found, default false
+    compress: true # Set whether to compress static resources, default true
   session.disable: false # Set whether to disable session middleware, default true
 
 ```
