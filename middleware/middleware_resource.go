@@ -122,11 +122,20 @@ func Serve(prefix string, exclude string, indexNotFound bool, compress bool, fs 
 		fileserver = http.StripPrefix(prefix, fileserver)
 	}
 	return func(c *gin.Context) {
+		acceptGzip := false
+		acceptEncodings := strings.Split(c.GetHeader("Accept-Encoding"), ", ")
+		for _, accept := range acceptEncodings {
+			encoding := strings.TrimSpace(strings.Split(accept, ";")[0])
+			if encoding == "gzip" {
+				acceptGzip = true
+				break
+			}
+		}
 		uri := c.Request.URL.Path
 		if (prefix != "" && prefix != "/") && (uri == "/" || uri == "/index.html") {
 			c.Request.URL.Path = prefix
-			c.Request.RequestURI = prefix
-			if compress {
+			c.Request.RequestURI = strings.Replace(c.Request.RequestURI, uri, prefix, 1)
+			if compress && acceptGzip {
 				c.Header("Content-Encoding", "gzip")
 				c.Header("Vary", "Accept-Encoding")
 				gz, _ := gzip.NewWriterLevel(c.Writer, gzip.BestCompression)
@@ -142,7 +151,7 @@ func Serve(prefix string, exclude string, indexNotFound bool, compress bool, fs 
 			return
 		}
 		if fs.Exists(prefix, exclude, c.Request.URL.Path) {
-			if compress {
+			if compress && acceptGzip {
 				c.Header("Content-Encoding", "gzip")
 				c.Header("Vary", "Accept-Encoding")
 				gz, _ := gzip.NewWriterLevel(c.Writer, gzip.BestCompression)
@@ -160,7 +169,7 @@ func Serve(prefix string, exclude string, indexNotFound bool, compress bool, fs 
 		if c.FullPath() == "" && indexNotFound {
 			c.Request.URL.Path = prefix
 			c.Request.RequestURI = prefix
-			if compress {
+			if compress && acceptGzip {
 				c.Header("Content-Encoding", "gzip")
 				c.Header("Vary", "Accept-Encoding")
 				gz, _ := gzip.NewWriterLevel(c.Writer, gzip.BestCompression)

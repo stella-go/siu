@@ -16,6 +16,7 @@ package middleware
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stella-go/siu/config"
@@ -67,7 +68,7 @@ func (p *MiddlewareRewrite) Function() gin.HandlerFunc {
 		if match, s := p.rewriteFunc(uri); match {
 			p.Logger.DEBUG("request path rewrite: %s -> %s", uri, s)
 			c.Request.URL.Path = s
-			c.Request.RequestURI = s
+			c.Request.RequestURI = strings.Replace(c.Request.RequestURI, uri, s, 1)
 			p.Server.HandleContext(c)
 			c.Abort()
 		}
