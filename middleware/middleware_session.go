@@ -33,6 +33,7 @@ type expiration struct {
 
 const (
 	SessionDisableKey  = "middleware.session.disable"
+	SessionTimeoutKey  = "middleware.session.timeout"
 	SessionMiddleOrder = 50
 	SessionCookieKey   = "siuid"
 	SessionContextKey  = "session"
@@ -43,10 +44,13 @@ type MiddlewareSession struct {
 	Logger interfaces.Logger  `@siu:"name='logger',default='type'"`
 	Redis  redis.Cmdable      `@siu:"name='redis',default='zero'"`
 
-	store *sync.Map
+	timeout int // s
+	store   *sync.Map
 }
 
 func (p *MiddlewareSession) Init() {
+	p.timeout = p.Conf.GetIntOr(SessionTimeoutKey, 86400)
+
 	if p.Redis == nil {
 		p.store = &sync.Map{}
 		go func() {
@@ -84,12 +88,14 @@ func (p *MiddlewareSession) Function() gin.HandlerFunc {
 		if session, ok := p.Get(sid); ok {
 			c.Set(SessionContextKey, session)
 		}
-		c.SetCookie(SessionCookieKey, sid, 86400, "", "", false, true)
+		c.SetCookie(SessionCookieKey, sid, p.timeout, "", "", false, true)
 
 		c.Next()
 
 		if session := c.GetString(SessionContextKey); session != "" {
 			p.Set(sid, session)
+		} else {
+			p.Del(sid)
 		}
 	}
 }
@@ -123,11 +129,19 @@ func (p *MiddlewareSession) Get(key string) (string, bool) {
 
 func (p *MiddlewareSession) Set(key string, value string) {
 	if p.Redis != nil {
-		p.Redis.Set(context.Background(), "session#"+key, value, 86400*time.Second)
+		p.Redis.Set(context.Background(), "session#"+key, value, time.Duration(p.timeout)*time.Second)
 	} else {
 		p.store.Store(key, &expiration{
-			exp:   time.Now().Unix() + int64(86400),
+			exp:   time.Now().Unix() + int64(p.timeout),
 			value: value,
 		})
+	}
+}
+
+func (p *MiddlewareSession) Del(key string) {
+	if p.Redis != nil {
+		p.Redis.Del(context.Background(), "session#"+key)
+	} else {
+		p.store.Delete(key)
 	}
 }
