@@ -51,6 +51,7 @@ func (p *MiddlewareCROS) Function() gin.HandlerFunc {
 		if p.wildcard {
 			c.Header("Access-Control-Allow-Origin", "*")
 			c.Header("Access-Control-Allow-Headers", "*")
+			c.Header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
 			c.Header("Access-Control-Allow-Credentials", "true")
 			c.Header("Access-Control-Expose-Headers", "*")
 		} else {
