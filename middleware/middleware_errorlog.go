@@ -16,6 +16,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stella-go/siu/config"
@@ -47,9 +48,14 @@ func (p *MiddlewareErrorlog) Condition() bool {
 func (p *MiddlewareErrorlog) Function() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
-			if err := recover(); err != nil {
-				err = stackerror.NewError(3, err.(error))
-				p.Logger.ERROR("", err)
+			if r := recover(); r != nil {
+				if err, ok := r.(error); ok {
+					err := stackerror.NewError(3, err)
+					p.Logger.ERROR("", err)
+				} else {
+					err := stackerror.NewError(3, fmt.Errorf("%v", r))
+					p.Logger.ERROR("", err)
+				}
 				c.AbortWithError(500, err500)
 			}
 		}()
