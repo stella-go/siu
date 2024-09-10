@@ -38,7 +38,13 @@ const (
 	s_true = "true"
 )
 
-func Create[T any](db *sql.DB, s *T) (int64, error) {
+type DataSource interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+}
+
+func Create[T any](db DataSource, s *T) (int64, error) {
 	if s == nil {
 		return 0, fmt.Errorf("pointer is nil")
 	}
@@ -98,7 +104,7 @@ func Create[T any](db *sql.DB, s *T) (int64, error) {
 	return ret.LastInsertId()
 }
 
-func Update[T any](db *sql.DB, s *T) (int64, error) {
+func Update[T any](db DataSource, s *T) (int64, error) {
 	if s == nil {
 		return 0, fmt.Errorf("pointer is nil")
 	}
@@ -158,7 +164,7 @@ func Update[T any](db *sql.DB, s *T) (int64, error) {
 	return ret.RowsAffected()
 }
 
-func Query[T any](db *sql.DB, s *T) (*T, error) {
+func Query[T any](db DataSource, s *T) (*T, error) {
 	if s == nil {
 		return nil, fmt.Errorf("pointer is nil")
 	}
@@ -220,7 +226,7 @@ func Query[T any](db *sql.DB, s *T) (*T, error) {
 	return ret, nil
 }
 
-func QueryMany[T any](db *sql.DB, s *T, page int, size int) (int, []*T, error) {
+func QueryMany[T any](db DataSource, s *T, page int, size int) (int, []*T, error) {
 	rt := reflect.TypeOf(s)
 	if rt.Kind() == reflect.Pointer {
 		rt = rt.Elem()
@@ -328,7 +334,7 @@ func newScan[T any](rt reflect.Type) (*T, []interface{}, error) {
 	return s, scan, nil
 }
 
-func Delete[T any](db *sql.DB, s *T) (int64, error) {
+func Delete[T any](db DataSource, s *T) (int64, error) {
 	if s == nil {
 		return 0, fmt.Errorf("pointer is nil")
 	}

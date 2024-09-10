@@ -230,6 +230,14 @@ func (c *context) Route(router ...interfaces.Router) {
 	c.routers = append(c.routers, router...)
 }
 
+func (c *context) Forward(ctx *gin.Context, path string) {
+	uri := ctx.Request.URL.Path
+	ctx.Request.URL.Path = path
+	ctx.Request.RequestURI = strings.Replace(ctx.Request.RequestURI, uri, path, 1)
+	c.server.HandleContext(ctx)
+	ctx.Abort()
+}
+
 func (c *context) Get(key string) (interface{}, bool) {
 	return c.store.Load(key)
 }

@@ -102,6 +102,11 @@ func Route(router ...interfaces.Router) {
 	ctx.Route(router...)
 }
 
+func Forward(c *gin.Context, path string) {
+	Default()
+	ctx.Forward(c, path)
+}
+
 func Get(key string) (interface{}, bool) {
 	Default()
 	return ctx.Get(key)
