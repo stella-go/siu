@@ -73,12 +73,6 @@ func Create[T any](db DataSource, s *T) (int64, error) {
 		if value, ok := tag[table]; ok {
 			table = value
 		}
-		if value, ok := tag[autoincrment]; ok && value == s_true {
-			continue
-		}
-		if value, ok := tag[currenttimestamp]; ok && value == s_true {
-			continue
-		}
 		fv := rv.Field(i)
 		if fv.IsNil() {
 			continue

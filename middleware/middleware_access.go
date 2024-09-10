@@ -29,6 +29,7 @@ import (
 
 const (
 	AccessMiddleDisableKey = "middleware.access.disable"
+	AccessMaxLengthKey     = "middleware.access.max-length"
 	AccessMiddleOrder      = 10
 )
 
@@ -48,9 +49,10 @@ func (w *CustomResponseWriter) WriteString(s string) (int, error) {
 }
 
 type MiddlewareAccess struct {
-	Conf   config.TypedConfig `@siu:"name='environment',default='type'"`
-	Logger interfaces.Logger  `@siu:"name='logger',default='type'"`
-	debug  bool
+	Conf      config.TypedConfig `@siu:"name='environment',default='type'"`
+	Logger    interfaces.Logger  `@siu:"name='logger',default='type'"`
+	debug     bool
+	maxLength int
 }
 
 func (p *MiddlewareAccess) Init() {
@@ -58,6 +60,7 @@ func (p *MiddlewareAccess) Init() {
 	if strings.ToLower(debug) == "debug" {
 		p.debug = true
 	}
+	p.maxLength = p.Conf.GetIntOr(AccessMaxLengthKey, 256)
 }
 
 func (p *MiddlewareAccess) Condition() bool {
@@ -98,6 +101,9 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			bts, _ := io.ReadAll(c.Request.Body)
 			sb := &strings.Builder{}
 			if len(bts) > 0 {
+				if len(bts) > p.maxLength {
+					bts = append(bts[:p.maxLength], []byte("...")...)
+				}
 				s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s\n", method, path, proto, headers, bts)
 				sb.WriteString(s)
 			} else {
@@ -119,6 +125,9 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 
 			bts = writer.body.Bytes()
 			if len(bts) > 0 {
+				if len(bts) > p.maxLength {
+					bts = append(bts[:p.maxLength], []byte("...")...)
+				}
 				s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts)
 				sb.WriteString(s)
 			} else {
