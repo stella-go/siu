@@ -102,10 +102,12 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			sb := &strings.Builder{}
 			if len(bts) > 0 {
 				if len(bts) > p.maxLength {
-					bts = append(bts[:p.maxLength], []byte("...")...)
+					s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s...\n", method, path, proto, headers, bts[:p.maxLength])
+					sb.WriteString(s)
+				} else {
+					s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s\n", method, path, proto, headers, bts)
+					sb.WriteString(s)
 				}
-				s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s\n", method, path, proto, headers, bts)
-				sb.WriteString(s)
 			} else {
 				s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n", method, path, proto, headers)
 				sb.WriteString(s)
@@ -126,10 +128,12 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			bts = writer.body.Bytes()
 			if len(bts) > 0 {
 				if len(bts) > p.maxLength {
-					bts = append(bts[:p.maxLength], []byte("...")...)
+					s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts[:p.maxLength])
+					sb.WriteString(s)
+				} else {
+					s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts)
+					sb.WriteString(s)
 				}
-				s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts)
-				sb.WriteString(s)
 			} else {
 				s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n", proto, status, statusText, headers)
 				sb.WriteString(s)
