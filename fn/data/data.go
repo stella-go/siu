@@ -396,15 +396,26 @@ func roundIfTime(v interface{}, round string) interface{} {
 	switch v := v.(type) {
 	case time.Time:
 		return v.Round(r)
+	case *time.Time:
+		return v.Round(r)
+	case n.Time:
+		return v.Round(r)
 	case *n.Time:
-		v.Val = v.Val.Round(r)
-		return v
+		return v.Round(r)
 	default:
 		if tv, ok := v.(time.Time); ok {
 			return tv.Round(r)
-		} else {
-			return v
 		}
+		if tv, ok := v.(*time.Time); ok {
+			return tv.Round(r)
+		}
+		if tv, ok := v.(n.Time); ok {
+			return tv.Round(r)
+		}
+		if tv, ok := v.(*n.Time); ok {
+			return tv.Round(r)
+		}
+		return v
 	}
 }
 func toSnakeCase(s string) string {
