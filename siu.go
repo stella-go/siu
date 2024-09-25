@@ -102,6 +102,11 @@ func Route(router ...interfaces.Router) {
 	ctx.Route(router...)
 }
 
+func Shutdown(shutdown ...interfaces.ShutdownHook) {
+	Default()
+	ctx.Shutdown(shutdown...)
+}
+
 func Forward(c *gin.Context, path string) {
 	Default()
 	ctx.Forward(c, path)

@@ -127,10 +127,11 @@ type context struct {
 	environment config.TypedConfig
 	logger      interfaces.Logger
 
-	registers  []interfaces.InjectRegister
-	auto       []interfaces.AutoFactory
-	middleware []interfaces.OrderedMiddleware
-	routers    []interfaces.Router
+	registers     []interfaces.InjectRegister
+	auto          []interfaces.AutoFactory
+	middleware    []interfaces.OrderedMiddleware
+	routers       []interfaces.Router
+	shutdownHooks []interfaces.ShutdownHook
 
 	store *sync.Map
 
@@ -138,7 +139,7 @@ type context struct {
 }
 
 func newContext(environment config.TypedConfig, contextLogger interfaces.Logger, server *gin.Engine) *context {
-	ctx := &context{environment, contextLogger, make([]interfaces.InjectRegister, 0), make([]interfaces.AutoFactory, 0), make([]interfaces.OrderedMiddleware, 0), make([]interfaces.Router, 0), &sync.Map{}, server}
+	ctx := &context{environment, contextLogger, make([]interfaces.InjectRegister, 0), make([]interfaces.AutoFactory, 0), make([]interfaces.OrderedMiddleware, 0), make([]interfaces.Router, 0), make([]interfaces.ShutdownHook, 0), &sync.Map{}, server}
 	if leveledLogger, ok := contextLogger.(interfaces.LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())
 	}
@@ -227,6 +228,10 @@ func (c *context) Use(middleware ...interfaces.OrderedMiddleware) {
 
 func (c *context) Route(router ...interfaces.Router) {
 	c.routers = append(c.routers, router...)
+}
+
+func (c *context) Shutdown(shutdown ...interfaces.ShutdownHook) {
+	c.shutdownHooks = append(c.shutdownHooks, shutdown...)
 }
 
 func (c *context) Forward(ctx *gin.Context, path string) {
@@ -427,5 +432,11 @@ func (c *context) Run() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	hs := interfaces.OrderSlice[interfaces.ShutdownHook](c.shutdownHooks)
+	sort.Sort(hs)
+	for i := len(hs) - 1; i >= 0; i-- {
+		hs[i].Function()()
+		common.DEBUG("%s is stop", hs[i].Name())
+	}
 	c.logger.INFO("Server stoping...")
 }
