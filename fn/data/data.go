@@ -16,6 +16,7 @@ package data
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -37,6 +38,72 @@ const (
 
 	s_true = "true"
 )
+
+var (
+	NullBool       = &n.Bool{}
+	NullInt        = &n.Int{}
+	NullInt8       = &n.Int8{}
+	NullInt16      = &n.Int16{}
+	NullInt32      = &n.Int32{}
+	NullRune       = NullInt32
+	NullInt64      = &n.Int64{}
+	NullUint       = &n.Uint{}
+	NullUint8      = &n.Uint8{}
+	NullByte       = NullUint8
+	NullUint16     = &n.Uint16{}
+	NullUint32     = &n.Uint32{}
+	NullUint64     = &n.Uint64{}
+	NullFloat32    = &n.Float32{}
+	NullFloat64    = &n.Float64{}
+	NullComplex64  = &n.Complex64{}
+	NullComplex128 = &n.Complex128{}
+	NullString     = &n.String{}
+	NullTime       = &n.Time{}
+)
+
+func isNull(v interface{}) bool {
+	switch v := v.(type) {
+	case *n.Bool:
+		return v == NullBool
+	case *n.Int:
+		return v == NullInt
+	case *n.Int8:
+		return v == NullInt8
+	case *n.Int16:
+		return v == NullInt16
+	case *n.Int32:
+		return v == NullInt32
+	/* case *n.Rune:
+	return v == NullRune */
+	case *n.Int64:
+		return v == NullInt64
+	case *n.Uint:
+		return v == NullUint
+	case *n.Uint8:
+		return v == NullUint8
+	/* case *n.Byte:
+	return v == NullByte */
+	case *n.Uint16:
+		return v == NullUint16
+	case *n.Uint32:
+		return v == NullUint32
+	case *n.Uint64:
+		return v == NullUint64
+	case *n.Float32:
+		return v == NullFloat32
+	case *n.Float64:
+		return v == NullFloat64
+	case *n.Complex64:
+		return v == NullComplex64
+	case *n.Complex128:
+		return v == NullComplex128
+	case *n.String:
+		return v == NullString
+	case *n.Time:
+		return v == NullTime
+	}
+	return false
+}
 
 type DataSource interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
@@ -82,7 +149,7 @@ func Create[T any](db DataSource, s *T) (int64, error) {
 		} else {
 			columns = append(columns, "`"+toSnakeCase(f.Name)+"`")
 		}
-		v := roundIfTime(fv.Interface(), tag[round])
+		v := parseValue(fv.Interface(), tag[round])
 		args = append(args, v)
 		holders = append(holders, "?")
 	}
@@ -138,7 +205,7 @@ func Update[T any](db DataSource, s *T) (int64, error) {
 		} else {
 			column = toSnakeCase(f.Name)
 		}
-		v := roundIfTime(fv.Interface(), tag[round])
+		v := parseValue(fv.Interface(), tag[round])
 		if value, ok := tag[primary]; ok && value == s_true {
 			where = append(where, fmt.Sprintf("`%s` = ?", column))
 			whereArgs = append(whereArgs, v)
@@ -196,7 +263,7 @@ func Query[T any](db DataSource, s *T) (*T, error) {
 		} else {
 			column = toSnakeCase(f.Name)
 		}
-		v := roundIfTime(fv.Interface(), tag[round])
+		v := parseValue(fv.Interface(), tag[round])
 		where = append(where, fmt.Sprintf("`%s` = ?", column))
 		whereArgs = append(whereArgs, v)
 	}
@@ -264,7 +331,7 @@ func QueryMany[T any](db DataSource, s *T, page int, size int) (int, []*T, error
 			} else {
 				column = toSnakeCase(f.Name)
 			}
-			v := roundIfTime(fv.Interface(), tag[round])
+			v := parseValue(fv.Interface(), tag[round])
 			where = append(where, fmt.Sprintf("`%s` = ?", column))
 			whereArgs = append(whereArgs, v)
 		}
@@ -367,7 +434,7 @@ func Delete[T any](db DataSource, s *T) (int64, error) {
 			if fv.IsNil() {
 				return 0, fmt.Errorf("primary %s is empty", column)
 			}
-			v := roundIfTime(fv.Interface(), tag[round])
+			v := parseValue(fv.Interface(), tag[round])
 			where = append(where, fmt.Sprintf("`%s` = ?", column))
 			whereArgs = append(whereArgs, v)
 		}
@@ -383,7 +450,18 @@ func Delete[T any](db DataSource, s *T) (int64, error) {
 	return ret.RowsAffected()
 }
 
-func roundIfTime(v interface{}, round string) interface{} {
+type sqlNull struct{}
+
+func (*sqlNull) Value() (driver.Value, error) {
+	return nil, nil
+}
+
+var null = &sqlNull{}
+
+func parseValue(v interface{}, round string) interface{} {
+	if isNull(v) {
+		return null
+	}
 	var r time.Duration
 	switch round {
 	case "s", s_true:
