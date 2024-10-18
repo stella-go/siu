@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stella-go/siu/config"
@@ -60,7 +61,7 @@ func (p *MiddlewareAccess) Init() {
 	if strings.ToLower(debug) == "debug" {
 		p.debug = true
 	}
-	p.maxLength = p.Conf.GetIntOr(AccessMaxLengthKey, 256)
+	p.maxLength = p.Conf.GetIntOr(AccessMaxLengthKey, 2048)
 }
 
 func (p *MiddlewareAccess) Condition() bool {
@@ -101,11 +102,17 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			bts, _ := io.ReadAll(c.Request.Body)
 			sb := &strings.Builder{}
 			if len(bts) > 0 {
-				if len(bts) > p.maxLength {
-					s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s...\n", method, path, proto, headers, bts[:p.maxLength])
-					sb.WriteString(s)
+				s := string(bts)
+				if p.isPrintable(s) {
+					if len(bts) > p.maxLength {
+						s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s...\n", method, path, proto, headers, bts[:p.maxLength])
+						sb.WriteString(s)
+					} else {
+						s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s\n", method, path, proto, headers, bts)
+						sb.WriteString(s)
+					}
 				} else {
-					s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n%s\n", method, path, proto, headers, bts)
+					s := fmt.Sprintf("\n=============::Request::=============\n%s %s %s\n\n%s\n<binary data>\n", method, path, proto, headers)
 					sb.WriteString(s)
 				}
 			} else {
@@ -127,11 +134,17 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 
 			bts = writer.body.Bytes()
 			if len(bts) > 0 {
-				if len(bts) > p.maxLength {
-					s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s...\n", proto, status, statusText, headers, bts[:p.maxLength])
-					sb.WriteString(s)
+				s := string(bts)
+				if p.isPrintable(s) {
+					if len(bts) > p.maxLength {
+						s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s...\n", proto, status, statusText, headers, bts[:p.maxLength])
+						sb.WriteString(s)
+					} else {
+						s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts)
+						sb.WriteString(s)
+					}
 				} else {
-					s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n%s\n", proto, status, statusText, headers, bts)
+					s := fmt.Sprintf("=============::Response::============\n%s %d %s\n\n%s\n<binary data>\n", proto, status, statusText, headers)
 					sb.WriteString(s)
 				}
 			} else {
@@ -154,12 +167,31 @@ func (p *MiddlewareAccess) Order() int {
 
 func (p *MiddlewareAccess) headerString(header http.Header) string {
 	sb := &strings.Builder{}
-	for k, v := range header {
-		if len(v) > 0 {
-			sb.WriteString(fmt.Sprintf("%s: %s\n", k, v[0]))
+	for k, va := range header {
+		if len(va) > 0 {
+			for _, v := range va {
+				sb.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+			}
 		} else {
-			sb.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+			sb.WriteString(fmt.Sprintf("%s: %s\n", k, va))
 		}
 	}
 	return sb.String()
+}
+
+func (p *MiddlewareAccess) isPrintable(s string) bool {
+	max := len(s)
+	if max == 0 {
+		return true
+	}
+	not_print := 0
+	for _, r := range s {
+		if !unicode.IsPrint(r) {
+			not_print++
+		}
+		if float64(not_print)/float64(max) > 0.2 {
+			return false
+		}
+	}
+	return float64(not_print)/float64(max) <= 0.2
 }

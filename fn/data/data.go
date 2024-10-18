@@ -195,9 +195,66 @@ func Update[T any](db DataSource, s *T) (int64, error) {
 		if value, ok := tag[table]; ok {
 			table = value
 		}
+		var column string
+		if value, ok := tag["column"]; ok {
+			column = value
+		} else {
+			column = toSnakeCase(f.Name)
+		}
 		fv := rv.Field(i)
 		if fv.IsNil() {
 			continue
+		}
+		v := parseValue(fv.Interface(), tag[round])
+		if value, ok := tag[primary]; ok && value == s_true {
+			where = append(where, fmt.Sprintf("`%s` = ?", column))
+			whereArgs = append(whereArgs, v)
+		} else {
+			set = append(set, fmt.Sprintf("`%s` = ?", column))
+			args = append(args, v)
+		}
+	}
+	if len(where) == 0 {
+		return 0, fmt.Errorf("primary not found, where condition empty")
+	}
+	SQL = fmt.Sprintf(SQL, table, strings.Join(set, ", "), strings.Join(where, ", "))
+	ret, err := db.Exec(SQL, append(args, whereArgs...)...)
+	if err != nil {
+		return 0, err
+	}
+	return ret.RowsAffected()
+}
+
+// set nil field to NULL value
+func Update2[T any](db DataSource, s *T) (int64, error) {
+	if s == nil {
+		return 0, fmt.Errorf("pointer is nil")
+	}
+	rt := reflect.TypeOf(s)
+	rv := reflect.ValueOf(s)
+	if rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	table := toSnakeCase(rt.Name())
+	set := make([]string, 0)
+	where := make([]string, 0)
+	args := make([]interface{}, 0)
+	whereArgs := make([]interface{}, 0)
+	SQL := "update `%s` set %s where %s"
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		tag, err := extractTag(f.Tag.Get(tag_free))
+		if err != nil {
+			return 0, err
+		}
+		if value, ok := tag[ignore]; ok && value == s_true {
+			continue
+		}
+		if value, ok := tag[table]; ok {
+			table = value
 		}
 		var column string
 		if value, ok := tag["column"]; ok {
@@ -205,14 +262,24 @@ func Update[T any](db DataSource, s *T) (int64, error) {
 		} else {
 			column = toSnakeCase(f.Name)
 		}
-		v := parseValue(fv.Interface(), tag[round])
-		if value, ok := tag[primary]; ok && value == s_true {
-			where = append(where, fmt.Sprintf("`%s` = ?", column))
-			whereArgs = append(whereArgs, v)
+		fv := rv.Field(i)
+		if fv.IsNil() {
+			if value, ok := tag[primary]; ok && value == s_true {
+				return 0, fmt.Errorf("primary %s is empty", column)
+			} else {
+				set = append(set, fmt.Sprintf("`%s` = NULL", column))
+			}
 			continue
 		}
-		set = append(set, fmt.Sprintf("`%s` = ?", column))
-		args = append(args, v)
+		if value, ok := tag[primary]; ok && value == s_true {
+			v := parseValue(fv.Interface(), tag[round])
+			where = append(where, fmt.Sprintf("`%s` = ?", column))
+			whereArgs = append(whereArgs, v)
+		} else {
+			v := parseValue(fv.Interface(), tag[round])
+			set = append(set, fmt.Sprintf("`%s` = ?", column))
+			args = append(args, v)
+		}
 	}
 	if len(where) == 0 {
 		return 0, fmt.Errorf("primary not found, where condition empty")
