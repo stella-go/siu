@@ -2,7 +2,9 @@ package data
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stella-go/siu/t/n"
@@ -20,6 +22,10 @@ type TbStudents struct {
 	Gender     *n.String `form:"gender" json:"gender,omitempty" @free:"table='tb_students',column='gender'"`
 	CreateTime *n.Time   `form:"create_time" json:"create_time,omitempty" @free:"table='tb_students',column='create_time',current-timestamp,round='s'"`
 	UpdateTime *n.Time   `form:"update_time" json:"update_time,omitempty" @free:"table='tb_students',column='update_time',current-timestamp,round='s'"`
+}
+
+func (s *TbStudents) String() string {
+	return fmt.Sprintf("TbStudents{Id: %s, No: %s, Name: %s, Age: %s, Gender: %s, CreateTime: %s, UpdateTime: %s}", s.Id, s.No, s.Name, s.Age, s.Gender, s.CreateTime, s.UpdateTime)
 }
 
 func TestMain(m *testing.M) {
@@ -69,5 +75,30 @@ func TestUpdate(t *testing.T) {
 	_, err := Update(db, s)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestUpdate2(t *testing.T) {
+	s := &TbStudents{Id: &n.Int{Val: 1}, Name: &n.String{Val: "Tom"}, CreateTime: &n.Time{Val: time.Now()}}
+	_, err := Update2(db, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExec(t *testing.T) {
+	{
+		s, err := QueryExec[TbStudents](db, "select * from tb_students limit 1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log(s)
+	}
+	{
+		s, err := QueryExecMany[TbStudents](db, "select * from tb_students")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log(s)
 	}
 }

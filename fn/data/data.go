@@ -62,44 +62,98 @@ var (
 )
 
 func isNull(v interface{}) bool {
+	if v == nil {
+		return true
+	}
 	switch v := v.(type) {
 	case *n.Bool:
+		if v == nil {
+			return true
+		}
 		return v == NullBool
 	case *n.Int:
+		if v == nil {
+			return true
+		}
 		return v == NullInt
 	case *n.Int8:
+		if v == nil {
+			return true
+		}
 		return v == NullInt8
 	case *n.Int16:
+		if v == nil {
+			return true
+		}
 		return v == NullInt16
 	case *n.Int32:
+		if v == nil {
+			return true
+		}
 		return v == NullInt32
 	/* case *n.Rune:
 	return v == NullRune */
 	case *n.Int64:
+		if v == nil {
+			return true
+		}
 		return v == NullInt64
 	case *n.Uint:
+		if v == nil {
+			return true
+		}
 		return v == NullUint
 	case *n.Uint8:
+		if v == nil {
+			return true
+		}
 		return v == NullUint8
 	/* case *n.Byte:
 	return v == NullByte */
 	case *n.Uint16:
+		if v == nil {
+			return true
+		}
 		return v == NullUint16
 	case *n.Uint32:
+		if v == nil {
+			return true
+		}
 		return v == NullUint32
 	case *n.Uint64:
+		if v == nil {
+			return true
+		}
 		return v == NullUint64
 	case *n.Float32:
+		if v == nil {
+			return true
+		}
 		return v == NullFloat32
 	case *n.Float64:
+		if v == nil {
+			return true
+		}
 		return v == NullFloat64
 	case *n.Complex64:
+		if v == nil {
+			return true
+		}
 		return v == NullComplex64
 	case *n.Complex128:
+		if v == nil {
+			return true
+		}
 		return v == NullComplex128
 	case *n.String:
+		if v == nil {
+			return true
+		}
 		return v == NullString
 	case *n.Time:
+		if v == nil {
+			return true
+		}
 		return v == NullTime
 	}
 	return false
@@ -266,10 +320,7 @@ func Update2[T any](db DataSource, s *T) (int64, error) {
 		if fv.IsNil() {
 			if value, ok := tag[primary]; ok && value == s_true {
 				return 0, fmt.Errorf("primary %s is empty", column)
-			} else {
-				set = append(set, fmt.Sprintf("`%s` = NULL", column))
 			}
-			continue
 		}
 		if value, ok := tag[primary]; ok && value == s_true {
 			v := parseValue(fv.Interface(), tag[round])
@@ -438,6 +489,49 @@ func QueryMany[T any](db DataSource, s *T, page int, size int) (int, []*T, error
 		results = append(results, ret)
 	}
 	return count, results, nil
+}
+
+func QueryExec[T any](db DataSource, SQL string, args ...interface{}) (*T, error) {
+	var empty T
+	rt := reflect.TypeOf(empty)
+	ret, scan, err := newScan[T](rt)
+	if err != nil {
+		return nil, err
+	}
+	db.QueryRow(SQL, args...)
+	err = db.QueryRow(SQL, args...).Scan(scan...)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, err
+		}
+		return nil, nil
+	}
+	return ret, nil
+}
+
+func QueryExecMany[T any](db DataSource, SQL string, args ...interface{}) ([]*T, error) {
+	var empty T
+	rt := reflect.TypeOf(empty)
+	rows, err := db.Query(SQL, args...)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return nil, err
+		}
+	}
+	defer rows.Close()
+	results := make([]*T, 0)
+	for rows.Next() {
+		ret, scan, err := newScan[T](rt)
+		if err != nil {
+			return nil, err
+		}
+		err = rows.Scan(scan...)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, ret)
+	}
+	return results, nil
 }
 
 func newScan[T any](rt reflect.Type) (*T, []interface{}, error) {
