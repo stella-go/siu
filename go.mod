@@ -8,7 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/google/uuid v1.6.0
-	github.com/stella-go/logger v1.0.5
+	github.com/stella-go/logger v1.0.6
 	gopkg.in/yaml.v2 v2.4.0
 )
 
