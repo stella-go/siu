@@ -1,4 +1,4 @@
-// Copyright 2010-2024 the original author or authors.
+// Copyright 2010-2025 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -129,8 +129,9 @@ func TestRun(t *testing.T) {
 		syscall.Kill(os.Getpid(), 15)
 	}()
 	os.Setenv("STELLA_SERVER_MODE", "debug")
-	os.Setenv("STELLA_LOGGER_SIU", "false")
-	os.Setenv("STELLA_LOGGER_LEVEL", "debug")
+	os.Setenv("STELLA_LOGGER_SIU", "true")
+	os.Setenv("STELLA_LOGGER_LEVEL", "info")
+	os.Setenv("STELLA_LOGGER_PATTERN", "%d{2006-01-02T15:04:05} %c %p [%g] - %m")
 	os.Setenv("STELLA_ZOOKEEPER", "zookeeperxxx")
 	os.Setenv("STELLA_ZOOKEEPER_SERVERS", "127.x0x.0.1:x21x81")
 	os.Setenv("STELLA_MIDDLEWARE_CROS_DISABLE", "true")

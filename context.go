@@ -1,4 +1,4 @@
-// Copyright 2010-2024 the original author or authors.
+// Copyright 2010-2025 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ const (
 	loggerEnvKey             = "logger"
 	loggerUseEnvKey          = loggerEnvKey + ".siu"
 	loggerLevelEnvKey        = loggerEnvKey + ".level"
+	loggerPatternEnvKey      = loggerEnvKey + ".pattern"
 	loggerDaliyEnvKey        = loggerEnvKey + ".daliy"
 	loggerPathEnvKey         = loggerEnvKey + ".path"
 	loggerFileEnvKey         = loggerEnvKey + ".file"
@@ -79,7 +80,7 @@ func (p *buildinLogger) DEBUG(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("DEBUG - [SIU] " + msg)
+		p.l.Printf("%s", "DEBUG - [SIU] "+msg)
 	}
 }
 
@@ -91,7 +92,7 @@ func (p *buildinLogger) INFO(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("INFO  - [SIU] " + msg)
+		p.l.Printf("%s", "INFO  - [SIU] "+msg)
 	}
 }
 
@@ -103,7 +104,7 @@ func (p *buildinLogger) WARN(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("WARN  - [SIU] " + msg)
+		p.l.Printf("%s", "WARN  - [SIU] "+msg)
 	}
 }
 
@@ -115,7 +116,7 @@ func (p *buildinLogger) ERROR(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("ERROR - [SIU] " + msg)
+		p.l.Printf("%s", "ERROR - [SIU] "+msg)
 	}
 }
 
@@ -152,6 +153,7 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 func newEnvironmentContext(environment config.TypedConfig) *context {
 	logUse := environment.GetBoolOr(loggerUseEnvKey, true)
 	logLevel := logger.Parse(environment.GetStringOr(loggerLevelEnvKey, "info"))
+	logPattern := environment.GetStringOr(loggerPatternEnvKey, "%d{06-01-02.15:04:05.000} [%g] %p %c - %m")
 	daily := environment.GetBoolOr(loggerDaliyEnvKey, true)
 	filePath := environment.GetStringOr(loggerPathEnvKey, ".")
 	fileName := environment.GetStringOr(loggerFileEnvKey, "stdout")
@@ -172,7 +174,7 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	}
 	var contextLogger interfaces.Logger
 	if logUse {
-		contextLogger = logger.NewRootLogger(logLevel, &logger.DefaultFormatter{}, writer).GetLogger("[SIU]")
+		contextLogger = logger.NewRootLogger(logLevel, &logger.PatternFormatter{Pattern: logPattern}, writer).GetLogger("[SIU]")
 	} else {
 		contextLogger = newBuildinLogger(logLevel, writer)
 		common.INFO("use buildin logger")
