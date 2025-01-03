@@ -51,6 +51,7 @@ const (
 const (
 	loggerEnvKey             = "logger"
 	loggerUseEnvKey          = loggerEnvKey + ".siu"
+	loggerTagEnvKey          = loggerEnvKey + ".tag"
 	loggerLevelEnvKey        = loggerEnvKey + ".level"
 	loggerPatternEnvKey      = loggerEnvKey + ".pattern"
 	loggerDaliyEnvKey        = loggerEnvKey + ".daliy"
@@ -65,11 +66,12 @@ const (
 type buildinLogger struct {
 	l        *log.Logger
 	logLevel logger.Level
+	tag      string
 }
 
-func newBuildinLogger(logLevel logger.Level, writer io.Writer) *buildinLogger {
+func newBuildinLogger(logLevel logger.Level, tag string, writer io.Writer) *buildinLogger {
 	l := log.New(writer, "", log.LstdFlags)
-	return &buildinLogger{l: l, logLevel: logLevel}
+	return &buildinLogger{l: l, logLevel: logLevel, tag: tag}
 }
 
 func (p *buildinLogger) DEBUG(format string, arr ...interface{}) {
@@ -80,7 +82,7 @@ func (p *buildinLogger) DEBUG(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("%s", "DEBUG - [SIU] "+msg)
+		p.l.Printf("DEBUG - %s %s", p.tag, msg)
 	}
 }
 
@@ -92,7 +94,7 @@ func (p *buildinLogger) INFO(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("%s", "INFO  - [SIU] "+msg)
+		p.l.Printf("INFO  - %s %s", p.tag, msg)
 	}
 }
 
@@ -104,7 +106,7 @@ func (p *buildinLogger) WARN(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("%s", "WARN  - [SIU] "+msg)
+		p.l.Printf("WARN  - %s %s", p.tag, msg)
 	}
 }
 
@@ -116,12 +118,16 @@ func (p *buildinLogger) ERROR(format string, arr ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("%s", "ERROR - [SIU] "+msg)
+		p.l.Printf("ERROR - %s %s", p.tag, msg)
 	}
 }
 
 func (p *buildinLogger) Level() logger.Level {
 	return p.logLevel
+}
+
+func (p *buildinLogger) Tag() string {
+	return p.tag
 }
 
 type context struct {
@@ -144,6 +150,9 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 	if leveledLogger, ok := contextLogger.(interfaces.LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())
 	}
+	if tagedLogger, ok := contextLogger.(interfaces.TagedLogger); ok {
+		common.SetTag(tagedLogger.Tag())
+	}
 	ctx.Register(&buildinRegister{ctx})
 	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{})
 	ctx.Use(&middleware.MiddlewareRewrite{}, &middleware.MiddlewareAccess{}, &middleware.MiddlewareCROS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{}, &middleware.MiddlewareSession{})
@@ -152,6 +161,7 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 
 func newEnvironmentContext(environment config.TypedConfig) *context {
 	logUse := environment.GetBoolOr(loggerUseEnvKey, true)
+	tag := environment.GetStringOr(loggerTagEnvKey, "[SIU]")
 	logLevel := logger.Parse(environment.GetStringOr(loggerLevelEnvKey, "info"))
 	logPattern := environment.GetStringOr(loggerPatternEnvKey, "%d{06-01-02.15:04:05.000} [%g] %p %c - %m")
 	daily := environment.GetBoolOr(loggerDaliyEnvKey, true)
@@ -174,9 +184,9 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	}
 	var contextLogger interfaces.Logger
 	if logUse {
-		contextLogger = logger.NewRootLogger(logLevel, &logger.PatternFormatter{Pattern: logPattern}, writer).GetLogger("[SIU]")
+		contextLogger = logger.NewRootLogger(logLevel, &logger.PatternFormatter{Pattern: logPattern}, writer).GetLogger(tag)
 	} else {
-		contextLogger = newBuildinLogger(logLevel, writer)
+		contextLogger = newBuildinLogger(logLevel, tag, writer)
 		common.INFO("use buildin logger")
 	}
 
@@ -237,9 +247,9 @@ func (c *context) Shutdown(shutdown ...interfaces.ShutdownHook) {
 }
 
 func (c *context) Forward(ctx *gin.Context, path string) {
-	uri := ctx.Request.URL.Path
+	url := ctx.Request.URL.Path
 	ctx.Request.URL.Path = path
-	ctx.Request.RequestURI = strings.Replace(ctx.Request.RequestURI, uri, path, 1)
+	ctx.Request.RequestURI = strings.Replace(ctx.Request.RequestURI, url, path, 1)
 	c.server.HandleContext(ctx)
 	ctx.Abort()
 }

@@ -23,11 +23,17 @@ import (
 
 var (
 	level logger.Level = logger.InfoLevel
+	tag   string       = "[SIU]"
 )
 
-// Not concurrent safe, used only during siu context initialization
+// concurrency unsafe, used only during siu context initialization
 func SetLevel(lv logger.Level) {
 	level = lv
+}
+
+// concurrency unsafe, used only during siu context initialization
+func SetTag(t string) {
+	tag = t
 }
 
 func DEBUG(format string, v ...interface{}) {
@@ -38,7 +44,7 @@ func DEBUG(format string, v ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, v...)
-		log.Output(2, "DEBUG - [SIU] "+msg)
+		log.Printf("DEBUG - %s %s", tag, msg)
 	}
 }
 
@@ -50,7 +56,7 @@ func INFO(format string, v ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, v...)
-		log.Output(2, "INFO  - [SIU] "+msg)
+		log.Printf("INFO  - %s %s", tag, msg)
 	}
 }
 
@@ -62,7 +68,7 @@ func WARN(format string, v ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, v...)
-		log.Output(2, "WARN  - [SIU] "+msg)
+		log.Printf("WARN  - %s %s", tag, msg)
 	}
 }
 
@@ -74,6 +80,6 @@ func ERROR(format string, v ...interface{}) {
 			}
 		}
 		msg := fmt.Sprintf(format, v...)
-		log.Output(2, "ERROR - [SIU] "+msg)
+		log.Printf("ERROR - %s %s", tag, msg)
 	}
 }

@@ -27,3 +27,8 @@ type LeveledLogger interface {
 	Logger
 	Level() logger.Level
 }
+
+type TagedLogger interface {
+	Logger
+	Tag() string
+}
