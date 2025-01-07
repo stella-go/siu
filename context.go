@@ -294,7 +294,7 @@ func (p *buildinRegister) Order() int {
 	return BuildinRegisterOrder
 }
 
-func (c *context) register() {
+func (c *context) register(resolver inject.ValueResolver) {
 	rs := interfaces.OrderSlice[interfaces.InjectRegister](c.registers)
 	sort.Sort(rs)
 	for _, register := range rs {
@@ -302,7 +302,7 @@ func (c *context) register() {
 		for k, v := range register.Named() {
 			if _, ok := inject.GetNamed(k); !ok {
 				if _, ok := s[v]; !ok && register.Order() != BuildinRegisterOrder {
-					err := inject.Inject(nil, v)
+					err := inject.Inject(resolver, v)
 					if err != nil {
 						panic(err)
 					}
@@ -319,7 +319,7 @@ func (c *context) register() {
 		for k, v := range register.Typed() {
 			if _, ok := inject.GetTyped(k); !ok {
 				if _, ok := s[v]; !ok && register.Order() != BuildinRegisterOrder {
-					err := inject.Inject(nil, v)
+					err := inject.Inject(resolver, v)
 					if err != nil {
 						panic(err)
 					}
@@ -346,9 +346,10 @@ func (c *context) Run() {
 		c.server.SetTrustedProxies(nil)
 	}
 
-	c.register()
-
 	resolver := &resolver{c.environment}
+
+	c.register(resolver)
+
 	fs := interfaces.OrderSlice[interfaces.AutoFactory](c.auto)
 	sort.Sort(fs)
 	for _, a := range fs {

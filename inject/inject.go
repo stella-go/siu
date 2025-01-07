@@ -92,6 +92,10 @@ func inject(r ValueResolver, obj interface{}) error {
 	common.DEBUG("Process object of type %s", prefType)
 	for i := 0; i < refType.NumField(); i++ {
 		fieldType := refType.Field(i)
+		_, ok := fieldType.Tag.Lookup("@siu")
+		if !ok {
+			continue
+		}
 		fieldValue := refValue.Field(i)
 		err := setValue(r, fieldType, fieldValue)
 		if err != nil {
