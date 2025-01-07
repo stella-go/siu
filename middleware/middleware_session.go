@@ -32,6 +32,7 @@ type expiration struct {
 }
 
 const (
+	SessionKey         = "middleware.session"
 	SessionDisableKey  = "middleware.session.disable"
 	SessionTimeoutKey  = "middleware.session.timeout"
 	SessionMiddleOrder = 50
@@ -73,10 +74,13 @@ func (p *MiddlewareSession) Init() {
 }
 
 func (p *MiddlewareSession) Condition() bool {
-	if v, ok := p.Conf.GetBool(SessionDisableKey); ok && v {
+	_, ok1 := p.Conf.Get(SessionKey)
+	v, ok2 := p.Conf.GetBool(SessionDisableKey)
+
+	if ok2 && v {
 		return false
 	}
-	return true
+	return ok1
 }
 
 func (p *MiddlewareSession) Function() gin.HandlerFunc {
