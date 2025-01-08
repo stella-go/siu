@@ -93,13 +93,13 @@ func (p *MiddlewareJwt) Function() gin.HandlerFunc {
 				token = c.GetHeader(JwtCookieKey)
 			}
 			if token == "" {
-				c.JSON(200, t.FailWith(401, "Unauthorized"))
+				c.JSON(401, t.FailWith(401, "Unauthorized"))
 				c.Abort()
 				return
 			}
 			subject, err := JwtVerify(token, p.secret)
 			if err != nil {
-				c.JSON(200, t.FailWith(401, "Unauthorized"))
+				c.JSON(401, t.FailWith(401, "Unauthorized"))
 				c.Abort()
 				return
 			}
@@ -128,6 +128,14 @@ func (p *MiddlewareJwt) isIncludes(c *gin.Context) bool {
 	return true
 }
 
+func (p *MiddlewareJwt) GetSubject(c *gin.Context) *Subject {
+	if value, ok := c.Get(JwtSubjectContextKey); ok {
+		if subject, ok := value.(*Subject); ok {
+			return subject
+		}
+	}
+	return nil
+}
 func (p *MiddlewareJwt) SetCookie(c *gin.Context) {
 	if token := c.GetString(JwtTokenContextKey); token != "" {
 		c.SetCookie(JwtCookieKey, token, p.expireSeconds, "/", p.cookieDomain, false, true)
@@ -142,6 +150,9 @@ func (p *MiddlewareJwt) SetCookie(c *gin.Context) {
 			}
 		}
 	}
+}
+func (p *MiddlewareJwt) SignToken(c *gin.Context, subject *Subject) (string, error) {
+	return JwtSign(subject, p.secret, time.Duration(p.expireSeconds)*time.Second)
 }
 func (p *MiddlewareJwt) SetTokenCookie(c *gin.Context, token string) {
 	c.SetCookie(JwtCookieKey, token, p.expireSeconds, "/", p.cookieDomain, false, true)

@@ -39,6 +39,11 @@ var initializableType = reflect.TypeOf((*Initializable)(nil)).Elem()
 type ValueResolver interface {
 	Resolve(string) (interface{}, bool)
 }
+type NopeValueResolver struct{}
+
+func (*NopeValueResolver) Resolve(string) (interface{}, bool) {
+	return nil, false
+}
 
 func RegisterTyped(refType reflect.Type, obj interface{}) error {
 	if _, ok := typed.Load(refType); ok {
