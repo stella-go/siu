@@ -143,6 +143,20 @@ func (p *MiddlewareJwt) SetCookie(c *gin.Context) {
 		}
 	}
 }
+func (p *MiddlewareJwt) SetTokenCookie(c *gin.Context, token string) {
+	c.SetCookie(JwtCookieKey, token, p.expireSeconds, "/", p.cookieDomain, false, true)
+}
+func (p *MiddlewareJwt) SetSubjectCookie(c *gin.Context, subject *Subject) error {
+	token, err := JwtSign(subject, p.secret, time.Duration(p.expireSeconds)*time.Second)
+	if err != nil {
+		return err
+	}
+	c.SetCookie(JwtCookieKey, token, p.expireSeconds, "/", p.cookieDomain, false, true)
+	return nil
+}
+func (p *MiddlewareJwt) ClearCookie(c *gin.Context) {
+	c.SetCookie(JwtCookieKey, "", 0, "/", p.cookieDomain, false, true)
+}
 
 type Claims struct {
 	*Subject
