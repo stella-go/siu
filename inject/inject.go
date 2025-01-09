@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/stella-go/siu/common"
+	"github.com/stella-go/siu/config"
 )
 
 var (
@@ -39,10 +40,18 @@ var initializableType = reflect.TypeOf((*Initializable)(nil)).Elem()
 type ValueResolver interface {
 	Resolve(string) (interface{}, bool)
 }
-type NopeValueResolver struct{}
+type NopValueResolver struct{}
 
-func (*NopeValueResolver) Resolve(string) (interface{}, bool) {
+func (*NopValueResolver) Resolve(string) (interface{}, bool) {
 	return nil, false
+}
+
+type ConfigResolver struct {
+	C config.Config
+}
+
+func (r *ConfigResolver) Resolve(key string) (interface{}, bool) {
+	return r.C.Get(key)
 }
 
 func RegisterTyped(refType reflect.Type, obj interface{}) error {

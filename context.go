@@ -262,14 +262,6 @@ func (c *context) Set(key string, value interface{}) {
 	c.store.Store(key, value)
 }
 
-type resolver struct {
-	env config.Config
-}
-
-func (r *resolver) Resolve(key string) (interface{}, bool) {
-	return r.env.Get(key)
-}
-
 type buildinRegister struct {
 	c *context
 }
@@ -346,7 +338,7 @@ func (c *context) Run() {
 		c.server.SetTrustedProxies(nil)
 	}
 
-	resolver := &resolver{c.environment}
+	resolver := &inject.ConfigResolver{C: c.environment}
 
 	c.register(resolver)
 
