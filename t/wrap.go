@@ -22,6 +22,126 @@ import (
 	"github.com/stella-go/siu/t/stackerror"
 )
 
+var (
+	NullBool       = &n.Bool{}
+	NullInt        = &n.Int{}
+	NullInt8       = &n.Int8{}
+	NullInt16      = &n.Int16{}
+	NullInt32      = &n.Int32{}
+	NullRune       = NullInt32
+	NullInt64      = &n.Int64{}
+	NullUint       = &n.Uint{}
+	NullUint8      = &n.Uint8{}
+	NullByte       = NullUint8
+	NullUint16     = &n.Uint16{}
+	NullUint32     = &n.Uint32{}
+	NullUint64     = &n.Uint64{}
+	NullFloat32    = &n.Float32{}
+	NullFloat64    = &n.Float64{}
+	NullComplex64  = &n.Complex64{}
+	NullComplex128 = &n.Complex128{}
+	NullString     = &n.String{}
+	NullTime       = &n.Time{}
+)
+
+func IsNull(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+	switch v := v.(type) {
+	case *n.Bool:
+		if v == nil {
+			return true
+		}
+		return v == NullBool
+	case *n.Int:
+		if v == nil {
+			return true
+		}
+		return v == NullInt
+	case *n.Int8:
+		if v == nil {
+			return true
+		}
+		return v == NullInt8
+	case *n.Int16:
+		if v == nil {
+			return true
+		}
+		return v == NullInt16
+	case *n.Int32:
+		if v == nil {
+			return true
+		}
+		return v == NullInt32
+	/* case *n.Rune:
+	return v == NullRune */
+	case *n.Int64:
+		if v == nil {
+			return true
+		}
+		return v == NullInt64
+	case *n.Uint:
+		if v == nil {
+			return true
+		}
+		return v == NullUint
+	case *n.Uint8:
+		if v == nil {
+			return true
+		}
+		return v == NullUint8
+	/* case *n.Byte:
+	return v == NullByte */
+	case *n.Uint16:
+		if v == nil {
+			return true
+		}
+		return v == NullUint16
+	case *n.Uint32:
+		if v == nil {
+			return true
+		}
+		return v == NullUint32
+	case *n.Uint64:
+		if v == nil {
+			return true
+		}
+		return v == NullUint64
+	case *n.Float32:
+		if v == nil {
+			return true
+		}
+		return v == NullFloat32
+	case *n.Float64:
+		if v == nil {
+			return true
+		}
+		return v == NullFloat64
+	case *n.Complex64:
+		if v == nil {
+			return true
+		}
+		return v == NullComplex64
+	case *n.Complex128:
+		if v == nil {
+			return true
+		}
+		return v == NullComplex128
+	case *n.String:
+		if v == nil {
+			return true
+		}
+		return v == NullString
+	case *n.Time:
+		if v == nil {
+			return true
+		}
+		return v == NullTime
+	}
+	return false
+}
+
 func Int(val int) *n.Int {
 	return &n.Int{Val: val}
 }

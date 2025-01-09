@@ -1405,3 +1405,11 @@ func (p *Time) Round(d time.Duration) *Time {
 	p.Val = p.Val.Round(d)
 	return p
 }
+
+type SqlNull struct{}
+
+func (*SqlNull) Value() (driver.Value, error) {
+	return nil, nil
+}
+
+var NULL = &SqlNull{}

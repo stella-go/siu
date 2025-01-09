@@ -16,13 +16,13 @@ package data
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/stella-go/siu/t"
 	"github.com/stella-go/siu/t/n"
 )
 
@@ -38,126 +38,6 @@ const (
 
 	s_true = "true"
 )
-
-var (
-	NullBool       = &n.Bool{}
-	NullInt        = &n.Int{}
-	NullInt8       = &n.Int8{}
-	NullInt16      = &n.Int16{}
-	NullInt32      = &n.Int32{}
-	NullRune       = NullInt32
-	NullInt64      = &n.Int64{}
-	NullUint       = &n.Uint{}
-	NullUint8      = &n.Uint8{}
-	NullByte       = NullUint8
-	NullUint16     = &n.Uint16{}
-	NullUint32     = &n.Uint32{}
-	NullUint64     = &n.Uint64{}
-	NullFloat32    = &n.Float32{}
-	NullFloat64    = &n.Float64{}
-	NullComplex64  = &n.Complex64{}
-	NullComplex128 = &n.Complex128{}
-	NullString     = &n.String{}
-	NullTime       = &n.Time{}
-)
-
-func isNull(v interface{}) bool {
-	if v == nil {
-		return true
-	}
-	switch v := v.(type) {
-	case *n.Bool:
-		if v == nil {
-			return true
-		}
-		return v == NullBool
-	case *n.Int:
-		if v == nil {
-			return true
-		}
-		return v == NullInt
-	case *n.Int8:
-		if v == nil {
-			return true
-		}
-		return v == NullInt8
-	case *n.Int16:
-		if v == nil {
-			return true
-		}
-		return v == NullInt16
-	case *n.Int32:
-		if v == nil {
-			return true
-		}
-		return v == NullInt32
-	/* case *n.Rune:
-	return v == NullRune */
-	case *n.Int64:
-		if v == nil {
-			return true
-		}
-		return v == NullInt64
-	case *n.Uint:
-		if v == nil {
-			return true
-		}
-		return v == NullUint
-	case *n.Uint8:
-		if v == nil {
-			return true
-		}
-		return v == NullUint8
-	/* case *n.Byte:
-	return v == NullByte */
-	case *n.Uint16:
-		if v == nil {
-			return true
-		}
-		return v == NullUint16
-	case *n.Uint32:
-		if v == nil {
-			return true
-		}
-		return v == NullUint32
-	case *n.Uint64:
-		if v == nil {
-			return true
-		}
-		return v == NullUint64
-	case *n.Float32:
-		if v == nil {
-			return true
-		}
-		return v == NullFloat32
-	case *n.Float64:
-		if v == nil {
-			return true
-		}
-		return v == NullFloat64
-	case *n.Complex64:
-		if v == nil {
-			return true
-		}
-		return v == NullComplex64
-	case *n.Complex128:
-		if v == nil {
-			return true
-		}
-		return v == NullComplex128
-	case *n.String:
-		if v == nil {
-			return true
-		}
-		return v == NullString
-	case *n.Time:
-		if v == nil {
-			return true
-		}
-		return v == NullTime
-	}
-	return false
-}
 
 type DataSource interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
@@ -406,6 +286,9 @@ func Query[T any](db DataSource, s *T) (*T, error) {
 }
 
 func QueryMany[T any](db DataSource, s *T, page int, size int) (int, []*T, error) {
+	if s == nil {
+		return 0, nil, fmt.Errorf("pointer is nil")
+	}
 	rt := reflect.TypeOf(s)
 	if rt.Kind() == reflect.Pointer {
 		rt = rt.Elem()
@@ -422,37 +305,35 @@ func QueryMany[T any](db DataSource, s *T, page int, size int) (int, []*T, error
 	table := toSnakeCase(rt.Name())
 	where := make([]string, 0)
 	whereArgs := make([]interface{}, 0)
-	if s != nil {
-		rv := reflect.ValueOf(s)
-		if rv.Kind() == reflect.Pointer {
-			rv = rv.Elem()
+	rv := reflect.ValueOf(s)
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		tag, err := extractTag(f.Tag.Get(tag_free))
+		if err != nil {
+			return 0, nil, err
 		}
-		for i := 0; i < rt.NumField(); i++ {
-			f := rt.Field(i)
-			tag, err := extractTag(f.Tag.Get(tag_free))
-			if err != nil {
-				return 0, nil, err
-			}
-			if value, ok := tag[ignore]; ok && value == s_true {
-				continue
-			}
-			if value, ok := tag[table]; ok {
-				table = value
-			}
-			fv := rv.Field(i)
-			if fv.IsNil() {
-				continue
-			}
-			var column string
-			if value, ok := tag["column"]; ok {
-				column = value
-			} else {
-				column = toSnakeCase(f.Name)
-			}
-			v := parseValue(fv.Interface(), tag[round])
-			where = append(where, fmt.Sprintf("`%s` = ?", column))
-			whereArgs = append(whereArgs, v)
+		if value, ok := tag[ignore]; ok && value == s_true {
+			continue
 		}
+		if value, ok := tag[table]; ok {
+			table = value
+		}
+		fv := rv.Field(i)
+		if fv.IsNil() {
+			continue
+		}
+		var column string
+		if value, ok := tag["column"]; ok {
+			column = value
+		} else {
+			column = toSnakeCase(f.Name)
+		}
+		v := parseValue(fv.Interface(), tag[round])
+		where = append(where, fmt.Sprintf("`%s` = ?", column))
+		whereArgs = append(whereArgs, v)
 	}
 	sWhere := strings.Join(where, " and ")
 	if sWhere != "" {
@@ -611,17 +492,9 @@ func Delete[T any](db DataSource, s *T) (int64, error) {
 	return ret.RowsAffected()
 }
 
-type sqlNull struct{}
-
-func (*sqlNull) Value() (driver.Value, error) {
-	return nil, nil
-}
-
-var null = &sqlNull{}
-
 func parseValue(v interface{}, round string) interface{} {
-	if isNull(v) {
-		return null
+	if t.IsNull(v) {
+		return n.NULL
 	}
 	var r time.Duration
 	switch round {

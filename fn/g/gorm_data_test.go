@@ -1,28 +1,28 @@
-package data
+package g
 
 import (
-	"database/sql"
 	"fmt"
 	"testing"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	st "github.com/stella-go/siu/t"
 	"github.com/stella-go/siu/t/n"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var (
-	db *sql.DB
+	db *gorm.DB
 )
 
 type TbStudents struct {
-	Id         *n.Int    `form:"id" json:"id,omitempty" @free:"table='tb_students',column='id',primary,auto-incrment"`
-	No         *n.String `form:"no" json:"no,omitempty" @free:"table='tb_students',column='no'"`
-	Name       *n.String `form:"name" json:"name,omitempty" @free:"table='tb_students',column='name'"`
-	Age        *n.Int    `form:"age" json:"age,omitempty" @free:"table='tb_students',column='age'"`
-	Gender     *n.String `form:"gender" json:"gender,omitempty" @free:"table='tb_students',column='gender'"`
-	CreateTime *n.Time   `form:"create_time" json:"create_time,omitempty" @free:"table='tb_students',column='create_time',current-timestamp,round='s'"`
-	UpdateTime *n.Time   `form:"update_time" json:"update_time,omitempty" @free:"table='tb_students',column='update_time',current-timestamp,round='s'"`
+	Id         *n.Int    `form:"id" json:"id,omitempty" gorm:"column:id;primarykey;autoIncrement;not null"`
+	No         *n.String `form:"no" json:"no,omitempty" gorm:"column:no"`
+	Name       *n.String `form:"name" json:"name,omitempty" gorm:"column:name"`
+	Age        *n.Int    `form:"age" json:"age,omitempty" gorm:"column:age;default:1"`
+	Gender     *n.String `form:"gender" json:"gender,omitempty" gorm:"column:gender;default:NULL"`
+	CreateTime *n.Time   `form:"create_time" json:"create_time,omitempty" gorm:"column:create_time;not null;default:current_timestamp"`
+	UpdateTime *n.Time   `form:"update_time" json:"update_time,omitempty" gorm:"column:update_time;not null;default:current_timestamp"`
 }
 
 func (s *TbStudents) String() string {
@@ -31,12 +31,16 @@ func (s *TbStudents) String() string {
 
 func TestMain(m *testing.M) {
 	dsn := "root:root@tcp(127.0.0.1:3306)/test?parseTime=true&collation=utf8_bin&charset=utf8"
-	c, err := sql.Open("mysql", dsn)
+	c, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
 	db = c
-	_, err = db.Exec(`
+	odb, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	_, err = odb.Exec(`
 CREATE TABLE IF NOT EXISTS tb_students (
     id INT NOT NULL AUTO_INCREMENT COMMENT 'ROW ID',
     no VARCHAR (32) COMMENT 'STUDENT NUMBER',
@@ -52,20 +56,19 @@ CREATE TABLE IF NOT EXISTS tb_students (
 		panic(err)
 	}
 	m.Run()
-	db.Close()
 }
 
 func TestCreate(t *testing.T) {
 	{
 		s := &TbStudents{}
-		_, err := Create(db, s)
+		err := Create(db, s)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	{
 		s := &TbStudents{Age: st.NullInt}
-		_, err := Create(db, s)
+		err := Create(db, s)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,14 +92,16 @@ func TestUpdate2(t *testing.T) {
 
 func TestExec(t *testing.T) {
 	{
-		s, err := QueryExec[TbStudents](db, "select * from tb_students limit 1")
+		stmt := db.Model(&TbStudents{}).Limit(1)
+		s, err := QueryExec[TbStudents](stmt)
 		if err != nil {
 			t.Fatal(err)
 		}
 		t.Log(s)
 	}
 	{
-		s, err := QueryExecMany[TbStudents](db, "select * from tb_students")
+		stmt := db.Model(&TbStudents{})
+		s, err := QueryExecMany[TbStudents](stmt)
 		if err != nil {
 			t.Fatal(err)
 		}

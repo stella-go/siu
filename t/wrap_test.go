@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/stella-go/siu/t/n"
 )
 
 func TestError(t *testing.T) {
@@ -74,4 +76,29 @@ func TestFailWith(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(bts))
+}
+
+func TestIsNull(t *testing.T) {
+	if !IsNull(nil) {
+		t.Error("Expected nil to be null")
+	}
+
+	var nullInt *n.Int
+	if !IsNull(nullInt) {
+		t.Error("Expected *n.Int nil to be null")
+	}
+
+	notNullInt := Int(5)
+	if IsNull(notNullInt) {
+		t.Error("Expected non-nil *n.Int to not be null")
+	}
+
+	if !IsNull(NullInt) {
+		t.Error("Expected NullInt nil to not be null")
+	}
+
+	notNullString := String("hello")
+	if IsNull(notNullString) {
+		t.Error("Expected non-nil *n.String to not be null")
+	}
 }
