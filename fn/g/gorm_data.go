@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/stella-go/siu/t"
-	"github.com/stella-go/siu/t/n"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
@@ -15,7 +14,38 @@ func Create[T any](db *gorm.DB, s *T) error {
 	if s == nil {
 		return fmt.Errorf("pointer is nil")
 	}
-	r := db.Model(s).Create(s)
+	rt := reflect.TypeOf(s)
+	rv := reflect.ValueOf(s)
+	if rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+	if rv.Kind() == reflect.Pointer {
+		rv = rv.Elem()
+	}
+	values := make(map[string]interface{})
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		setting := schema.ParseTagSetting(f.Tag.Get("gorm"), ";")
+		if val, ok := setting["-"]; ok && (val == "-" || val == "all") {
+			continue
+		}
+		column := ""
+		if value, ok := setting["COLUMN"]; ok {
+			column = value
+		} else {
+			column = db.NamingStrategy.ColumnName("", f.Name)
+		}
+		fv := rv.Field(i)
+		if fv.IsNil() {
+			continue
+		}
+		if t.IsNull(fv.Interface()) {
+			values[column] = gorm.Expr("NULL")
+		} else {
+			values[column] = fv.Interface()
+		}
+	}
+	r := db.Model(s).Create(values)
 	return r.Error
 }
 
@@ -49,7 +79,7 @@ func Update[T any](db *gorm.DB, s *T) (int64, error) {
 			continue
 		}
 		if t.IsNull(fv.Interface()) {
-			updates[column] = n.NULL
+			updates[column] = gorm.Expr("NULL")
 		} else {
 			updates[column] = fv.Interface()
 		}
@@ -84,7 +114,7 @@ func Update2[T any](db *gorm.DB, s *T) (int64, error) {
 		}
 		fv := rv.Field(i)
 		if fv.IsNil() {
-			updates[column] = n.NULL
+			updates[column] = gorm.Expr("NULL")
 		} else {
 			updates[column] = fv.Interface()
 		}

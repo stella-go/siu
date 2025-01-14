@@ -21,12 +21,13 @@ type TbStudents struct {
 	Name       *n.String `form:"name" json:"name,omitempty" gorm:"column:name"`
 	Age        *n.Int    `form:"age" json:"age,omitempty" gorm:"column:age;default:1"`
 	Gender     *n.String `form:"gender" json:"gender,omitempty" gorm:"column:gender;default:NULL"`
+	LastTime   *n.Time   `form:"last_time" json:"last_time,omitempty" gorm:"column:last_time;default:\"1970-01-01\""`
 	CreateTime *n.Time   `form:"create_time" json:"create_time,omitempty" gorm:"column:create_time;not null;default:current_timestamp"`
 	UpdateTime *n.Time   `form:"update_time" json:"update_time,omitempty" gorm:"column:update_time;not null;default:current_timestamp"`
 }
 
 func (s *TbStudents) String() string {
-	return fmt.Sprintf("TbStudents{Id: %s, No: %s, Name: %s, Age: %s, Gender: %s, CreateTime: %s, UpdateTime: %s}", s.Id, s.No, s.Name, s.Age, s.Gender, s.CreateTime, s.UpdateTime)
+	return fmt.Sprintf("TbStudents{Id: %s, No: %s, Name: %s, Age: %s, Gender: %s, LastTime: %s, CreateTime: %s, UpdateTime: %s}", s.Id, s.No, s.Name, s.Age, s.Gender, s.LastTime, s.CreateTime, s.UpdateTime)
 }
 
 func TestMain(m *testing.M) {
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS tb_students (
     name VARCHAR (64) COMMENT 'STUDENT NAME',
     age INT DEFAULT 1 COMMENT 'STUDENT AGE',
     gender VARCHAR (1) DEFAULT NULL COMMENT 'STUDENT GENDER',
+	last_time DATETIME DEFAULT "1970-01-01" COMMENT 'LAST TIME',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'CREATE TIME',
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'UPDATE TIME',
     PRIMARY KEY (id)
@@ -67,7 +69,7 @@ func TestCreate(t *testing.T) {
 		}
 	}
 	{
-		s := &TbStudents{Age: st.NullInt}
+		s := &TbStudents{Age: st.NullInt, LastTime: st.NullTime}
 		err := Create(db, s)
 		if err != nil {
 			t.Fatal(err)
