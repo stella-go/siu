@@ -1367,13 +1367,13 @@ func (p *Time) Scan(value interface{}) error {
 	case []byte:
 		t, err := time.ParseInLocation(time.RFC3339Nano, string(v), time.Local)
 		if err != nil {
-			return nil
+			return err
 		}
 		p.Val = t
 	case string:
 		t, err := time.ParseInLocation(time.RFC3339Nano, v, time.Local)
 		if err != nil {
-			return nil
+			return err
 		}
 		p.Val = t
 	case time.Time:

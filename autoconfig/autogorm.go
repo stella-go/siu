@@ -139,6 +139,12 @@ func createGormDB(logger interfaces.Logger, conf config.TypedConfig, prefix stri
 	timeout := conf.GetIntOr(prefix+".timeout", 60000)
 	readTimeout := conf.GetIntOr(prefix+".readTimeout", 30000)
 	writeTimeout := conf.GetIntOr(prefix+".writeTimeout", 30000)
+	loc := time.Local
+	if loca, ok := conf.GetString(prefix + ".loc"); ok {
+		if locl, err := time.LoadLocation(loca); err == nil {
+			loc = locl
+		}
+	}
 
 	cparams, ok := conf.Get(prefix + ".params")
 	params := make(map[string]string)
@@ -169,7 +175,7 @@ func createGormDB(logger interfaces.Logger, conf config.TypedConfig, prefix stri
 		Addr:                 addr,
 		DBName:               dbName,
 		ParseTime:            true,
-		Loc:                  time.Now().Location(),
+		Loc:                  loc,
 		Collation:            collation,
 		Timeout:              time.Duration(timeout) * time.Millisecond,
 		ReadTimeout:          time.Duration(readTimeout) * time.Millisecond,
