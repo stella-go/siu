@@ -128,7 +128,7 @@ func (p *AutoRedis) Typed() map[reflect.Type]interface{} {
 	return nil
 }
 
-func createRedis(conf config.TypedConfig, prefix string) (*redis.Client, error) {
+func createRedis(conf config.TypedConfig, _ /*prefix*/ string) (*redis.Client, error) {
 	addr, ok := conf.GetString(RedisAddrKey)
 	if !ok {
 		return nil, fmt.Errorf("reids address can not be empty")
@@ -158,7 +158,7 @@ func createRedis(conf config.TypedConfig, prefix string) (*redis.Client, error) 
 	}
 }
 
-func createClusterRedis(conf config.TypedConfig, prefix string) (*redis.ClusterClient, error) {
+func createClusterRedis(conf config.TypedConfig, _ /*prefix*/ string) (*redis.ClusterClient, error) {
 	addrStr, ok := conf.GetString(RedisAddrKey)
 	if !ok {
 		return nil, fmt.Errorf("reids address can not be empty")

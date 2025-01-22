@@ -189,7 +189,7 @@ func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) err
 	return nil
 }
 
-func resolveInterface(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
+func resolveInterface(tagMap map[string]string, _ /*r*/ ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
 	if name, ok := tagMap["name"]; ok {
 		if v, ok := named.Load(name); ok {
 			common.DEBUG("Found interface %s with name \"%s\"", typ, name)
@@ -255,7 +255,7 @@ func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type) (re
 	return value, false, nil
 }
 
-func resolveStruct(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
+func resolveStruct(_ /*tagMap*/ map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
 	value, err := create(r, typ)
 	if err != nil {
 		return reflect.Value{}, true, nil
@@ -347,7 +347,7 @@ func resolveValue(tagMap map[string]string, r ValueResolver, typ reflect.Type) (
 	}
 }
 
-func resolveValueWithDefault(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
+func resolveValueWithDefault(tagMap map[string]string, _ /*r*/ ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
 	if defaultValue, ok := tagMap["default"]; ok {
 		convertValue, err := convertString(defaultValue, typ)
 		if err != nil {

@@ -86,7 +86,7 @@ func (p *AutoZookeeper) Typed() map[reflect.Type]interface{} {
 	}
 }
 
-func createZookeeper(Conf config.TypedConfig, prefix string) (*zk.Conn, error) {
+func createZookeeper(Conf config.TypedConfig, _ /*prefix*/ string) (*zk.Conn, error) {
 	serversStr, ok := Conf.GetString(ZookeeperServersKey)
 	if !ok {
 		return nil, fmt.Errorf("zookeeper servers can not be empty")

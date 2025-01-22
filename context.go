@@ -154,7 +154,7 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 		common.SetTag(tagedLogger.Tag())
 	}
 	ctx.Register(&buildinRegister{ctx})
-	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoGorm{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{}, &autoconfig.AutoCipher{})
+	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoGorm{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{}, &autoconfig.AutoOss{}, &autoconfig.AutoCipher{})
 	ctx.Use(&middleware.MiddlewareRewrite{}, &middleware.MiddlewareAccess{}, &middleware.MiddlewareCROS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{}, &middleware.MiddlewareSession{}, &middleware.MiddlewareJwt{})
 	return ctx
 }
