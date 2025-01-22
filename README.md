@@ -170,6 +170,27 @@ type Service struct {
 }
 ```
 
+### Gorm Related Configuration
+```yml
+gorm:
+  user: root
+  passwd: root
+  addr: 127.0.0.1:3306
+  dbName: test
+  collation: utf8mb4_bin
+  timeout: 100000
+  readTimeout: 50000
+  writeTimeout: 50000
+```
+- configurations are the same as MySQL
+
+Obtaining a Gorm instance:
+```go
+type Service struct {
+	DB      *gorm.DB            `@siu:""`
+}
+```
+
 ### Redis Related Configuration
 ```yml
 redis:
@@ -215,6 +236,54 @@ type Service struct {
 }
 ```
 
+### OSS Related Configuration
+```yml
+oss:
+  endpoint: 127.0.0.1:9000
+  ak: <some ak>
+  sk: <some sk>
+  region: default
+  disable-ssl: false
+  force-path-style: true
+```
+- **oss.endpoint** oss server endpoint.
+- **oss.ak** oss access key.
+- **oss.sk** oss access secret.
+- **oss.region** oss region. Default value `default`.
+- **oss.disable-ssl** oss disable ssl access. Default value `false`.
+- **oss.force-path-style** oss force use path stype. Default value `true`.
+
+Obtaining a OSS instance:
+```go
+type Service struct {
+	Oss      *s3.S3           `@siu:""`
+}
+```
+
+### Cipher Related Configuration
+```yml
+cipher:
+  key: <some aes hex value>
+  hmac-key: <some hex value>
+  public-key: |
+    -----BEGIN RSA PUBLIC KEY-----
+    MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCzm464TXngLXtZ1xdoGKoVodSM
+    Sjd6q/Hwr/jRId9...
+    -----END RSA PUBLIC KEY-----
+  private-key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIICXAIBAAKBgQCzm464TXngLXtZ1xdoGKoVodSMSjd6q/Hwr/jRId9WlM+VPglg
+    snajexPi0GHDPL4...
+    -----END RSA PRIVATE KEY----
+```
+
+Obtaining a Cipher instance:
+```go
+type Service struct {
+	Cipher      interfaces.Cipher           `@siu:""`
+}
+```
+
 ## Middleware Related Configuration
 ```yml
 middleware:
@@ -236,6 +305,15 @@ middleware:
   session:
     disable: false # Set whether to disable session middleware, default true
     timeout: 3600 # session idle timeout in seconds. Default value `86400`.
+  jwt:
+    disable: false # Set whether to disable jwt authorization, default false.
+    cookie-domain: # # Set domain the cookie will be set, default "".
+    expire-seconds: 3600 # Set the jwt Token expire times.
+    secret: <some value> # Set jwt secret, default random value.
+    excludes:  # Set jwt authorization exclude paths, default /login, /admin/login, /api/login.
+      - "/login"
+      - "/admin/login"
+      - "/api/login"
 
 
 ```
