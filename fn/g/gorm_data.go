@@ -14,6 +14,14 @@ func Create[T any](db *gorm.DB, s *T) error {
 	if s == nil {
 		return fmt.Errorf("pointer is nil")
 	}
+	r := db.Model(s).Create(s)
+	return r.Error
+}
+
+func Create2[T any](db *gorm.DB, s *T) (int64, error) {
+	if s == nil {
+		return 0, fmt.Errorf("pointer is nil")
+	}
 	rt := reflect.TypeOf(s)
 	rv := reflect.ValueOf(s)
 	if rt.Kind() == reflect.Pointer {
@@ -45,8 +53,39 @@ func Create[T any](db *gorm.DB, s *T) error {
 			values[column] = fv.Interface()
 		}
 	}
-	r := db.Model(s).Create(values)
-	return r.Error
+	copied := make(map[string]interface{})
+	for k, v := range values {
+		copied[k] = v
+	}
+	r := db.Model(s).Create(copied)
+	if r.Error != nil {
+		return 0, r.Error
+	}
+	var ILastInsertId interface{}
+	for k, v := range copied {
+		if _, ok := values[k]; !ok {
+			ILastInsertId = v
+			break
+		}
+	}
+	var lastInsertId int64
+	if ILastInsertId != nil {
+		switch id := ILastInsertId.(type) {
+		case int:
+			lastInsertId = int64(id)
+		case int32:
+			lastInsertId = int64(id)
+		case int64:
+			lastInsertId = int64(id)
+		case uint:
+			lastInsertId = int64(id)
+		case uint32:
+			lastInsertId = int64(id)
+		case uint64:
+			lastInsertId = int64(id)
+		}
+	}
+	return lastInsertId, r.Error
 }
 
 func Update[T any](db *gorm.DB, s *T) (int64, error) {
