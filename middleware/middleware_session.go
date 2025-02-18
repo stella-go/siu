@@ -23,7 +23,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/stella-go/siu/config"
-	"github.com/stella-go/siu/interfaces"
 )
 
 type expiration struct {
@@ -41,9 +40,8 @@ const (
 )
 
 type MiddlewareSession struct {
-	Conf   config.TypedConfig `@siu:"name='environment',default='type'"`
-	Logger interfaces.Logger  `@siu:"name='logger',default='type'"`
-	Redis  redis.Cmdable      `@siu:"name='redis',default='zero'"`
+	Conf  config.TypedConfig `@siu:"name='environment',default='type'"`
+	Redis redis.Cmdable      `@siu:"name='redis',default='zero'"`
 
 	timeout int // s
 	store   *sync.Map

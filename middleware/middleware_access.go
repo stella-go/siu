@@ -88,7 +88,7 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			ip := c.ClientIP()
 			size := c.Writer.Size()
 			status := c.Writer.Status()
-			p.Logger.INFO("%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
+			printLogger(p.Logger.INFO, "%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
 		} else {
 			start := time.Now()
 			method := c.Request.Method
@@ -154,9 +154,9 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			sb.WriteString("=============::End::=================")
 
 			if _, ok := c.Get(ContextResourceKey); !ok {
-				p.Logger.DEBUG("%s", sb.String())
+				printLogger(p.Logger.DEBUG, "%s", sb.String())
 			}
-			p.Logger.INFO("%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
+			printLogger(p.Logger.INFO, "%s %3d %s %s %dms %dbytes", method, status, path, ip, latency, size)
 		}
 	}
 }

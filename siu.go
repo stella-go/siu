@@ -15,6 +15,9 @@
 package siu
 
 import (
+	"fmt"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -51,6 +54,10 @@ func Default() {
 }
 
 func DEBUG(format string, arr ...interface{}) {
+	if strings.Contains(format, "__sLINE__") {
+		file, line := stack()
+		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
+	}
 	if ctx == nil {
 		common.DEBUG(format, arr...)
 	} else {
@@ -59,6 +66,10 @@ func DEBUG(format string, arr ...interface{}) {
 }
 
 func INFO(format string, arr ...interface{}) {
+	if strings.Contains(format, "__sLINE__") {
+		file, line := stack()
+		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
+	}
 	if ctx == nil {
 		common.INFO(format, arr...)
 	} else {
@@ -67,6 +78,10 @@ func INFO(format string, arr ...interface{}) {
 }
 
 func WARN(format string, arr ...interface{}) {
+	if strings.Contains(format, "__sLINE__") {
+		file, line := stack()
+		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
+	}
 	if ctx == nil {
 		common.WARN(format, arr...)
 	} else {
@@ -75,6 +90,10 @@ func WARN(format string, arr ...interface{}) {
 }
 
 func ERROR(format string, arr ...interface{}) {
+	if strings.Contains(format, "__sLINE__") {
+		file, line := stack()
+		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
+	}
 	if ctx == nil {
 		common.ERROR(format, arr...)
 	} else {
@@ -125,4 +144,13 @@ func Set(key string, value interface{}) {
 func Run() {
 	Default()
 	ctx.Run()
+}
+
+func stack() (string, int) {
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		return "", 0
+	}
+	file = file[strings.LastIndex(file, "/")+1:]
+	return file, line
 }

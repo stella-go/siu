@@ -51,10 +51,10 @@ func (p *MiddlewareErrorlog) Function() gin.HandlerFunc {
 			if r := recover(); r != nil {
 				if err, ok := r.(error); ok {
 					err := stackerror.NewError(3, err)
-					p.Logger.ERROR("", err)
+					printLogger(p.Logger.ERROR, "", err)
 				} else {
 					err := stackerror.NewError(3, fmt.Errorf("%v", r))
-					p.Logger.ERROR("", err)
+					printLogger(p.Logger.ERROR, "", err)
 				}
 				c.AbortWithError(500, err500)
 			}

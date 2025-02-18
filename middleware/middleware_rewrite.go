@@ -66,7 +66,7 @@ func (p *MiddlewareRewrite) Function() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		uri := c.Request.URL.Path
 		if match, s := p.rewriteFunc(uri); match {
-			p.Logger.DEBUG("request path rewrite: %s -> %s", uri, s)
+			printLogger(p.Logger.DEBUG, "request path rewrite: %s -> %s", uri, s)
 			c.Request.URL.Path = s
 			c.Request.RequestURI = strings.Replace(c.Request.RequestURI, uri, s, 1)
 			p.Server.HandleContext(c)
