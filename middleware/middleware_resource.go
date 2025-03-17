@@ -85,10 +85,10 @@ func LocalFile(root string, indexes bool) *LocalFileSystem {
 }
 
 func (l *LocalFileSystem) Exists(prefix string, exclude string, filepath string) bool {
-	if strings.HasPrefix(filepath, exclude) {
+	if p := strings.TrimPrefix(filepath, exclude); exclude != "/" && len(p) < len(filepath) {
 		return false
 	}
-	if prefix != "" && prefix != "/" && strings.HasPrefix(filepath, prefix) {
+	if p := strings.TrimPrefix(filepath, prefix); prefix != "/" && len(p) < len(filepath) {
 		return true
 	}
 	_, err := l.FileSystem.Open(filepath)
