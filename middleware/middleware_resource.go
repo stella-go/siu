@@ -16,7 +16,6 @@ package middleware
 
 import (
 	"compress/gzip"
-	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -86,13 +85,14 @@ func LocalFile(root string, indexes bool) *LocalFileSystem {
 }
 
 func (l *LocalFileSystem) Exists(prefix string, exclude string, filepath string) bool {
-	if p := strings.TrimPrefix(filepath, exclude); len(p) < len(filepath) {
+	if strings.HasPrefix(filepath, exclude) {
 		return false
 	}
-	if p := strings.TrimPrefix(filepath, prefix); len(p) < len(filepath) {
+	if prefix != "" && prefix != "/" && strings.HasPrefix(filepath, prefix) {
 		return true
 	}
-	return false
+	_, err := l.FileSystem.Open(filepath)
+	return err == nil
 }
 
 func (l *LocalFileSystem) Open(name string) (http.File, error) {
@@ -122,64 +122,48 @@ func Serve(prefix string, exclude string, indexNotFound bool, compress bool, fs 
 		fileserver = http.StripPrefix(prefix, fileserver)
 	}
 	return func(c *gin.Context) {
+		if c.FullPath() != "" {
+			return
+		}
+		writer := c.Writer
 		acceptGzip := false
-		acceptEncodings := strings.Split(c.GetHeader("Accept-Encoding"), ", ")
-		for _, accept := range acceptEncodings {
-			encoding := strings.TrimSpace(strings.Split(accept, ";")[0])
-			if encoding == "gzip" {
-				acceptGzip = true
-				break
+		if compress {
+			acceptEncodings := strings.Split(c.GetHeader("Accept-Encoding"), ", ")
+			for _, accept := range acceptEncodings {
+				encoding := strings.TrimSpace(strings.Split(accept, ";")[0])
+				if encoding == "gzip" {
+					acceptGzip = true
+					break
+				}
+			}
+			if acceptGzip {
+				writer.Header().Set("Content-Encoding", "gzip")
+				writer.Header().Set("Vary", "Accept-Encoding")
+				gz, _ := gzip.NewWriterLevel(writer, gzip.BestCompression)
+				writer = &GzipResponseWriter{ResponseWriter: writer, gz: gz}
+				defer gz.Close()
 			}
 		}
+
 		uri := c.Request.URL.Path
 		if (prefix != "" && prefix != "/") && (uri == "/" || uri == "/index.html") {
 			c.Request.URL.Path = prefix
 			c.Request.RequestURI = strings.Replace(c.Request.RequestURI, uri, prefix, 1)
-			if compress && acceptGzip {
-				c.Header("Content-Encoding", "gzip")
-				c.Header("Vary", "Accept-Encoding")
-				gz, _ := gzip.NewWriterLevel(c.Writer, gzip.BestCompression)
-				writer := &GzipResponseWriter{ResponseWriter: c.Writer, gz: gz}
-				fileserver.ServeHTTP(writer, c.Request)
-				gz.Close()
-				c.Header("Content-Length", fmt.Sprint(c.Writer.Size()))
-			} else {
-				fileserver.ServeHTTP(c.Writer, c.Request)
-			}
+			fileserver.ServeHTTP(writer, c.Request)
 			c.Set(ContextResourceKey, true)
 			c.Abort()
 			return
 		}
 		if fs.Exists(prefix, exclude, c.Request.URL.Path) {
-			if compress && acceptGzip {
-				c.Header("Content-Encoding", "gzip")
-				c.Header("Vary", "Accept-Encoding")
-				gz, _ := gzip.NewWriterLevel(c.Writer, gzip.BestCompression)
-				writer := &GzipResponseWriter{ResponseWriter: c.Writer, gz: gz}
-				fileserver.ServeHTTP(writer, c.Request)
-				gz.Close()
-				c.Header("Content-Length", fmt.Sprint(c.Writer.Size()))
-			} else {
-				fileserver.ServeHTTP(c.Writer, c.Request)
-			}
+			fileserver.ServeHTTP(writer, c.Request)
 			c.Set(ContextResourceKey, true)
 			c.Abort()
 			return
 		}
-		if c.FullPath() == "" && indexNotFound {
+		if indexNotFound {
 			c.Request.URL.Path = prefix
-			c.Request.RequestURI = prefix
-			if compress && acceptGzip {
-				c.Header("Content-Encoding", "gzip")
-				c.Header("Vary", "Accept-Encoding")
-				gz, _ := gzip.NewWriterLevel(c.Writer, gzip.BestCompression)
-				writer := &GzipResponseWriter{ResponseWriter: c.Writer, gz: gz}
-				fileserver.ServeHTTP(writer, c.Request)
-				gz.Close()
-				c.Header("Content-Length", fmt.Sprint(c.Writer.Size()))
-			} else {
-				fileserver.ServeHTTP(c.Writer, c.Request)
-			}
+			c.Request.RequestURI = strings.Replace(c.Request.RequestURI, uri, prefix, 1)
+			fileserver.ServeHTTP(writer, c.Request)
 			c.Set(ContextResourceKey, true)
 			c.Abort()
 			return
