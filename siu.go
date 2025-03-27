@@ -16,6 +16,7 @@ package siu
 
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -99,6 +100,21 @@ func ERROR(format string, arr ...interface{}) {
 	} else {
 		ctx.ERROR(format, arr...)
 	}
+}
+
+func RegisterBean(name string, typ reflect.Type, obj interface{}) {
+	Default()
+	ctx.RegisterBean(name, typ, obj)
+}
+
+func GetBeanByName(name string) (interface{}, bool) {
+	Default()
+	return ctx.GetBeanByName(name)
+}
+
+func GetBeanByType(typ reflect.Type) (interface{}, bool) {
+	Default()
+	return ctx.GetBeanByType(typ)
 }
 
 func Register(registers ...interfaces.InjectRegister) {

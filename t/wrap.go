@@ -142,6 +142,10 @@ func IsNull(v interface{}) bool {
 	return false
 }
 
+func Bool(val bool) *n.Bool {
+	return &n.Bool{Val: val}
+}
+
 func Int(val int) *n.Int {
 	return &n.Int{Val: val}
 }

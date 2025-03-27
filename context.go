@@ -61,6 +61,7 @@ const (
 	loggerMaxFileSizesEnvKey = loggerEnvKey + ".maxFileSize"
 
 	BuildinRegisterOrder = 0
+	BeanRegisterOrder
 )
 
 type buildinLogger struct {
@@ -224,6 +225,40 @@ func (c *context) WARN(format string, arr ...interface{}) {
 
 func (c *context) ERROR(format string, arr ...interface{}) {
 	c.logger.ERROR(format, arr...)
+}
+
+type beanRegister struct {
+	obj  interface{}
+	name string
+	typ  reflect.Type
+}
+
+func (p *beanRegister) Named() map[string]interface{} {
+	return map[string]interface{}{
+		p.name: p.obj,
+	}
+}
+
+func (p *beanRegister) Typed() map[reflect.Type]interface{} {
+	return map[reflect.Type]interface{}{
+		p.typ: p.obj,
+	}
+}
+
+func (p *beanRegister) Order() int {
+	return BeanRegisterOrder
+}
+
+func (c *context) RegisterBean(name string, typ reflect.Type, obj interface{}) {
+	c.registers = append(c.registers, &beanRegister{obj, name, typ})
+}
+
+func (c *context) GetBeanByName(name string) (interface{}, bool) {
+	return inject.GetNamed(name)
+}
+
+func (c *context) GetBeanByType(typ reflect.Type) (interface{}, bool) {
+	return inject.GetTyped(typ)
 }
 
 func (c *context) Register(registers ...interfaces.InjectRegister) {
