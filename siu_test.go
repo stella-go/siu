@@ -132,7 +132,7 @@ func TestRun(t *testing.T) {
 	os.Setenv("STELLA_SERVER_MODE", "debug")
 	os.Setenv("STELLA_LOGGER_SIU", "true")
 	os.Setenv("STELLA_LOGGER_LEVEL", "debug")
-	os.Setenv("STELLA_LOGGER_TAG", "false")
+	os.Setenv("STELLA_LOGGER_TAG", "[SIU]")
 	os.Setenv("STELLA_LOGGER_PATTERN", "%d{2006-01-02T15:04:05} %c %p [%g] - %l{7} %m")
 	os.Setenv("STELLA_ZOOKEEPER", "zookeeperxxx")
 	os.Setenv("STELLA_ZOOKEEPER_SERVERS", "127.x0x.0.1:x21x81")

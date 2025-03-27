@@ -186,3 +186,26 @@ func TestValue(t *testing.T) {
 		}
 	}
 }
+
+type A struct {
+	V string `@siu:"value='${a.v:av}'"`
+	B B      `@siu:""`
+}
+
+type B struct {
+	V string `@siu:"value='${b.v:bv}'"`
+	A *A     `@siu:""`
+}
+
+func TestVisited(t *testing.T) {
+	common.SetLevel(logger.DebugLevel)
+	a := &A{}
+	err := Inject(&NopValueResolver{}, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(a)
+	fmt.Println(a.B)
+	fmt.Println(a.B.A)
+	fmt.Println(a.B.A.B)
+}

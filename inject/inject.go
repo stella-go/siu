@@ -89,15 +89,19 @@ func Inject(r ValueResolver, obj interface{}) error {
 			panic(err)
 		}
 	}()
-	return inject(r, obj)
+	return inject(r, obj, make(map[reflect.Type]reflect.Value))
 }
 
-func inject(r ValueResolver, obj interface{}) error {
+func inject(r ValueResolver, obj interface{}, visited map[reflect.Type]reflect.Value) error {
 	prefType := reflect.TypeOf(obj)
 	prefValue := reflect.ValueOf(obj)
 	if prefType.Kind() != reflect.Ptr {
 		return fmt.Errorf("the object to be injected must be a pointer")
 	}
+	if _, ok := visited[prefType]; ok {
+		return nil
+	}
+	visited[prefType] = prefValue
 	refType := prefType.Elem()
 	refValue := prefValue.Elem()
 	if refType.Kind() != reflect.Struct {
@@ -111,7 +115,7 @@ func inject(r ValueResolver, obj interface{}) error {
 			continue
 		}
 		fieldValue := refValue.Field(i)
-		err := setValue(r, fieldType, fieldValue)
+		err := setValue(r, fieldType, fieldValue, visited)
 		if err != nil {
 			common.ERROR("Inject field %s.%s with error:", refType, fieldType.Name, err)
 			return err
@@ -129,7 +133,7 @@ func inject(r ValueResolver, obj interface{}) error {
 	return nil
 }
 
-func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) error {
+func setValue(r ValueResolver, field reflect.StructField, val reflect.Value, visited map[reflect.Type]reflect.Value) error {
 	tag, ok := field.Tag.Lookup("@siu")
 	if !ok {
 		return nil
@@ -164,7 +168,7 @@ func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) err
 			}
 			val.Set(value)
 		case reflect.Ptr:
-			value, zero, err := resolvePtr(tagMap, r, field.Type)
+			value, zero, err := resolvePtr(tagMap, r, field.Type, visited)
 			if err != nil {
 				return err
 			}
@@ -173,13 +177,13 @@ func setValue(r ValueResolver, field reflect.StructField, val reflect.Value) err
 			}
 			val.Set(value)
 		case reflect.Struct:
-			value, _, err := resolveStruct(tagMap, r, field.Type)
+			value, _, err := resolveStruct(tagMap, r, field.Type, visited)
 			if err != nil {
 				return err
 			}
 			val.Set(value)
 		default:
-			value, err := create(r, field.Type)
+			value, err := create(r, field.Type, visited)
 			if err != nil {
 				return err
 			}
@@ -214,9 +218,9 @@ func resolveInterface(tagMap map[string]string, _ /*r*/ ValueResolver, typ refle
 	return reflect.Value{}, true, fmt.Errorf("interface type %s not found", typ)
 }
 
-func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
+func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type, visited map[reflect.Type]reflect.Value) (reflect.Value, bool, error) {
 	if t, ok := tagMap["type"]; ok && t == "private" {
-		value, err := create(r, typ)
+		value, err := create(r, typ, visited)
 		if err != nil {
 			return reflect.Value{}, true, nil
 		}
@@ -243,11 +247,10 @@ func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type) (re
 			return reflect.Value{}, true, nil
 		}
 	}
-	value, err := create(r, typ)
+	value, err := create(r, typ, visited)
 	if err != nil {
 		return reflect.Value{}, true, err
 	}
-	common.DEBUG("Create object %s", typ)
 	if name, ok := tagMap["name"]; ok {
 		named.Store(name, value)
 	}
@@ -255,42 +258,49 @@ func resolvePtr(tagMap map[string]string, r ValueResolver, typ reflect.Type) (re
 	return value, false, nil
 }
 
-func resolveStruct(_ /*tagMap*/ map[string]string, r ValueResolver, typ reflect.Type) (reflect.Value, bool, error) {
-	value, err := create(r, typ)
+func resolveStruct(_ /*tagMap*/ map[string]string, r ValueResolver, typ reflect.Type, visited map[reflect.Type]reflect.Value) (reflect.Value, bool, error) {
+	value, err := create(r, typ, visited)
 	if err != nil {
 		return reflect.Value{}, true, nil
 	}
-	common.DEBUG("Create object %s", typ)
 	return value, false, nil
 }
 
-func create(r ValueResolver, typ reflect.Type) (reflect.Value, error) {
+func create(r ValueResolver, typ reflect.Type, visited map[reflect.Type]reflect.Value) (reflect.Value, error) {
+	if value, ok := visited[typ]; ok {
+		common.DEBUG("Detected recursive dependency, skipping creation of object %s", typ)
+		return value, nil
+	}
 	var value reflect.Value
 	switch typ.Kind() {
 	case reflect.Struct:
 		pvalue := reflect.New(typ)
-		err := inject(r, pvalue.Interface())
+		err := inject(r, pvalue.Interface(), visited)
 		if err != nil {
 			return value, err
 		}
 		value = pvalue.Elem()
+		common.DEBUG("Create object %s", typ)
 		return value, nil
 	case reflect.Ptr:
 		value = reflect.New(typ.Elem())
-		err := inject(r, value.Interface())
+		err := inject(r, value.Interface(), visited)
 		if err != nil {
 			return reflect.Value{}, err
 		}
+		common.DEBUG("Create object %s", typ)
 		return value, nil
 	case reflect.Array, reflect.Slice, reflect.Map, reflect.Chan:
 		v := reflect.New(typ)
+		common.DEBUG("Create object %s", typ)
 		return v.Elem(), nil
 	default:
 		value := reflect.Zero(typ)
-		err := inject(r, value.Interface())
+		err := inject(r, value.Interface(), visited)
 		if err != nil {
 			return reflect.Value{}, err
 		}
+		common.DEBUG("Create object %s", typ)
 		return value, nil
 	}
 }
