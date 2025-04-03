@@ -61,7 +61,67 @@ func (p *Bool) Scan(value interface{}) error {
 		} else {
 			p.Val = true
 		}
+	case int32:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case int16:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case int8:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case int:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case uint64:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case uint32:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case uint16:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case uint8:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case uint:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
 	case float64:
+		if v == 0 {
+			p.Val = false
+		} else {
+			p.Val = true
+		}
+	case float32:
 		if v == 0 {
 			p.Val = false
 		} else {
@@ -146,7 +206,27 @@ func (p *Int) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = int(v)
+	case int32:
+		p.Val = int(v)
+	case int16:
+		p.Val = int(v)
+	case int8:
+		p.Val = int(v)
+	case int:
+		p.Val = int(v)
+	case uint64:
+		p.Val = int(v)
+	case uint32:
+		p.Val = int(v)
+	case uint16:
+		p.Val = int(v)
+	case uint8:
+		p.Val = int(v)
+	case uint:
+		p.Val = int(v)
 	case float64:
+		p.Val = int(v)
+	case float32:
 		p.Val = int(v)
 	case bool:
 		if v {
@@ -227,7 +307,27 @@ func (p *Int8) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = int8(v)
+	case int32:
+		p.Val = int8(v)
+	case int16:
+		p.Val = int8(v)
+	case int8:
+		p.Val = int8(v)
+	case int:
+		p.Val = int8(v)
+	case uint64:
+		p.Val = int8(v)
+	case uint32:
+		p.Val = int8(v)
+	case uint16:
+		p.Val = int8(v)
+	case uint8:
+		p.Val = int8(v)
+	case uint:
+		p.Val = int8(v)
 	case float64:
+		p.Val = int8(v)
+	case float32:
 		p.Val = int8(v)
 	case bool:
 		if v {
@@ -308,7 +408,27 @@ func (p *Int16) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = int16(v)
+	case int32:
+		p.Val = int16(v)
+	case int16:
+		p.Val = int16(v)
+	case int8:
+		p.Val = int16(v)
+	case int:
+		p.Val = int16(v)
+	case uint64:
+		p.Val = int16(v)
+	case uint32:
+		p.Val = int16(v)
+	case uint16:
+		p.Val = int16(v)
+	case uint8:
+		p.Val = int16(v)
+	case uint:
+		p.Val = int16(v)
 	case float64:
+		p.Val = int16(v)
+	case float32:
 		p.Val = int16(v)
 	case bool:
 		if v {
@@ -389,7 +509,27 @@ func (p *Int32) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = int32(v)
+	case int32:
+		p.Val = int32(v)
+	case int16:
+		p.Val = int32(v)
+	case int8:
+		p.Val = int32(v)
+	case int:
+		p.Val = int32(v)
+	case uint64:
+		p.Val = int32(v)
+	case uint32:
+		p.Val = int32(v)
+	case uint16:
+		p.Val = int32(v)
+	case uint8:
+		p.Val = int32(v)
+	case uint:
+		p.Val = int32(v)
 	case float64:
+		p.Val = int32(v)
+	case float32:
 		p.Val = int32(v)
 	case bool:
 		if v {
@@ -472,8 +612,28 @@ func (p Int64) String() string {
 func (p *Int64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
-		p.Val = v
+		p.Val = int64(v)
+	case int32:
+		p.Val = int64(v)
+	case int16:
+		p.Val = int64(v)
+	case int8:
+		p.Val = int64(v)
+	case int:
+		p.Val = int64(v)
+	case uint64:
+		p.Val = int64(v)
+	case uint32:
+		p.Val = int64(v)
+	case uint16:
+		p.Val = int64(v)
+	case uint8:
+		p.Val = int64(v)
+	case uint:
+		p.Val = int64(v)
 	case float64:
+		p.Val = int64(v)
+	case float32:
 		p.Val = int64(v)
 	case bool:
 		if v {
@@ -492,7 +652,7 @@ func (p *Int64) Scan(value interface{}) error {
 		if err != nil {
 			return err
 		}
-		p.Val = i
+		p.Val = int64(i)
 	case time.Time:
 		p.Val = v.UnixNano()
 	case nil:
@@ -554,7 +714,27 @@ func (p *Uint) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = uint(v)
+	case int32:
+		p.Val = uint(v)
+	case int16:
+		p.Val = uint(v)
+	case int8:
+		p.Val = uint(v)
+	case int:
+		p.Val = uint(v)
+	case uint64:
+		p.Val = uint(v)
+	case uint32:
+		p.Val = uint(v)
+	case uint16:
+		p.Val = uint(v)
+	case uint8:
+		p.Val = uint(v)
+	case uint:
+		p.Val = uint(v)
 	case float64:
+		p.Val = uint(v)
+	case float32:
 		p.Val = uint(v)
 	case bool:
 		if v {
@@ -635,7 +815,27 @@ func (p *Uint8) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = uint8(v)
+	case int32:
+		p.Val = uint8(v)
+	case int16:
+		p.Val = uint8(v)
+	case int8:
+		p.Val = uint8(v)
+	case int:
+		p.Val = uint8(v)
+	case uint64:
+		p.Val = uint8(v)
+	case uint32:
+		p.Val = uint8(v)
+	case uint16:
+		p.Val = uint8(v)
+	case uint8:
+		p.Val = uint8(v)
+	case uint:
+		p.Val = uint8(v)
 	case float64:
+		p.Val = uint8(v)
+	case float32:
 		p.Val = uint8(v)
 	case bool:
 		if v {
@@ -719,7 +919,27 @@ func (p *Uint16) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = uint16(v)
+	case int32:
+		p.Val = uint16(v)
+	case int16:
+		p.Val = uint16(v)
+	case int8:
+		p.Val = uint16(v)
+	case int:
+		p.Val = uint16(v)
+	case uint64:
+		p.Val = uint16(v)
+	case uint32:
+		p.Val = uint16(v)
+	case uint16:
+		p.Val = uint16(v)
+	case uint8:
+		p.Val = uint16(v)
+	case uint:
+		p.Val = uint16(v)
 	case float64:
+		p.Val = uint16(v)
+	case float32:
 		p.Val = uint16(v)
 	case bool:
 		if v {
@@ -800,7 +1020,27 @@ func (p *Uint32) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = uint32(v)
+	case int32:
+		p.Val = uint32(v)
+	case int16:
+		p.Val = uint32(v)
+	case int8:
+		p.Val = uint32(v)
+	case int:
+		p.Val = uint32(v)
+	case uint64:
+		p.Val = uint32(v)
+	case uint32:
+		p.Val = uint32(v)
+	case uint16:
+		p.Val = uint32(v)
+	case uint8:
+		p.Val = uint32(v)
+	case uint:
+		p.Val = uint32(v)
 	case float64:
+		p.Val = uint32(v)
+	case float32:
 		p.Val = uint32(v)
 	case bool:
 		if v {
@@ -881,7 +1121,27 @@ func (p *Uint64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = uint64(v)
+	case int32:
+		p.Val = uint64(v)
+	case int16:
+		p.Val = uint64(v)
+	case int8:
+		p.Val = uint64(v)
+	case int:
+		p.Val = uint64(v)
+	case uint64:
+		p.Val = uint64(v)
+	case uint32:
+		p.Val = uint64(v)
+	case uint16:
+		p.Val = uint64(v)
+	case uint8:
+		p.Val = uint64(v)
+	case uint:
+		p.Val = uint64(v)
 	case float64:
+		p.Val = uint64(v)
+	case float32:
 		p.Val = uint64(v)
 	case bool:
 		if v {
@@ -962,7 +1222,27 @@ func (p *Float32) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = float32(v)
+	case int32:
+		p.Val = float32(v)
+	case int16:
+		p.Val = float32(v)
+	case int8:
+		p.Val = float32(v)
+	case int:
+		p.Val = float32(v)
+	case uint64:
+		p.Val = float32(v)
+	case uint32:
+		p.Val = float32(v)
+	case uint16:
+		p.Val = float32(v)
+	case uint8:
+		p.Val = float32(v)
+	case uint:
+		p.Val = float32(v)
 	case float64:
+		p.Val = float32(v)
+	case float32:
 		p.Val = float32(v)
 	case bool:
 		if v {
@@ -1043,7 +1323,27 @@ func (p *Float64) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = float64(v)
+	case int32:
+		p.Val = float64(v)
+	case int16:
+		p.Val = float64(v)
+	case int8:
+		p.Val = float64(v)
+	case int:
+		p.Val = float64(v)
+	case uint64:
+		p.Val = float64(v)
+	case uint32:
+		p.Val = float64(v)
+	case uint16:
+		p.Val = float64(v)
+	case uint8:
+		p.Val = float64(v)
+	case uint:
+		p.Val = float64(v)
 	case float64:
+		p.Val = float64(v)
+	case float32:
 		p.Val = float64(v)
 	case bool:
 		if v {
@@ -1286,8 +1586,28 @@ func (p *String) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = strconv.FormatInt(v, 10)
+	case int32:
+		p.Val = strconv.FormatInt(int64(v), 10)
+	case int16:
+		p.Val = strconv.FormatInt(int64(v), 10)
+	case int8:
+		p.Val = strconv.FormatInt(int64(v), 10)
+	case int:
+		p.Val = strconv.FormatInt(int64(v), 10)
+	case uint64:
+		p.Val = strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		p.Val = strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		p.Val = strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		p.Val = strconv.FormatUint(uint64(v), 10)
+	case uint:
+		p.Val = strconv.FormatUint(uint64(v), 10)
 	case float64:
-		p.Val = strconv.FormatFloat(v, 'f', -1, 64)
+		p.Val = strconv.FormatFloat(float64(v), 'f', -1, 64)
+	case float32:
+		p.Val = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case bool:
 		p.Val = strconv.FormatBool(v)
 	case []byte:

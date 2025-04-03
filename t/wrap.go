@@ -138,6 +138,8 @@ func IsNull(v interface{}) bool {
 			return true
 		}
 		return v == NullTime
+	case *n.SqlNull:
+		return true
 	}
 	return false
 }
