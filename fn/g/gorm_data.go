@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"github.com/stella-go/siu/t"
 	"gorm.io/gorm"
@@ -53,38 +54,31 @@ func Create2[T any](db *gorm.DB, s *T) (int64, error) {
 			values[column] = fv.Interface()
 		}
 	}
-	copied := make(map[string]interface{})
-	for k, v := range values {
-		copied[k] = v
-	}
-	r := db.Model(s).Create(copied)
+	r := db.Model(s).Create(values)
 	if r.Error != nil {
 		return 0, r.Error
 	}
-	var ILastInsertId interface{}
-	for k, v := range copied {
-		if _, ok := values[k]; !ok {
-			ILastInsertId = v
-			break
-		}
-	}
+
 	var lastInsertId int64
-	if ILastInsertId != nil {
-		switch id := ILastInsertId.(type) {
-		case int:
-			lastInsertId = int64(id)
-		case int32:
-			lastInsertId = int64(id)
-		case int64:
-			lastInsertId = int64(id)
-		case uint:
-			lastInsertId = int64(id)
-		case uint32:
-			lastInsertId = int64(id)
-		case uint64:
-			lastInsertId = int64(id)
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		column := ""
+		setting := schema.ParseTagSetting(f.Tag.Get("gorm"), ";")
+		if value, ok := setting["COLUMN"]; ok {
+			column = value
+		} else {
+			column = db.NamingStrategy.ColumnName("", f.Name)
+		}
+		_, ok1 := setting["AUTOINCREMENT"]
+		_, ok2 := setting["AUTO_INCREMENT"]
+		if ok1 || ok2 {
+			if v, ok := values[column]; ok {
+				sv := fmt.Sprintf("%v", v)
+				lastInsertId, _ = strconv.ParseInt(sv, 10, 64)
+			}
 		}
 	}
+
 	return lastInsertId, r.Error
 }
 
@@ -92,38 +86,7 @@ func Update[T any](db *gorm.DB, s *T) (int64, error) {
 	if s == nil {
 		return 0, fmt.Errorf("pointer is nil")
 	}
-	rt := reflect.TypeOf(s)
-	rv := reflect.ValueOf(s)
-	if rt.Kind() == reflect.Pointer {
-		rt = rt.Elem()
-	}
-	if rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	updates := make(map[string]interface{})
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-		setting := schema.ParseTagSetting(f.Tag.Get("gorm"), ";")
-		if val, ok := setting["-"]; ok && (val == "-" || val == "all") {
-			continue
-		}
-		column := ""
-		if value, ok := setting["COLUMN"]; ok {
-			column = value
-		} else {
-			column = db.NamingStrategy.ColumnName("", f.Name)
-		}
-		fv := rv.Field(i)
-		if fv.IsNil() {
-			continue
-		}
-		if t.IsNull(fv.Interface()) {
-			updates[column] = gorm.Expr("NULL")
-		} else {
-			updates[column] = fv.Interface()
-		}
-	}
-	r := db.Model(s).Updates(updates)
+	r := db.Model(s).Updates(s)
 	return r.RowsAffected, r.Error
 }
 func Update2[T any](db *gorm.DB, s *T) (int64, error) {
@@ -145,6 +108,11 @@ func Update2[T any](db *gorm.DB, s *T) (int64, error) {
 		if val, ok := setting["-"]; ok && (val == "-" || val == "all") {
 			continue
 		}
+		_, ok1 := setting["AUTOINCREMENT"]
+		_, ok2 := setting["AUTO_INCREMENT"]
+		if ok1 || ok2 {
+			continue
+		}
 		column := ""
 		if value, ok := setting["COLUMN"]; ok {
 			column = value
@@ -153,6 +121,9 @@ func Update2[T any](db *gorm.DB, s *T) (int64, error) {
 		}
 		fv := rv.Field(i)
 		if fv.IsNil() {
+			continue
+		}
+		if t.IsNull(fv.Interface()) {
 			updates[column] = gorm.Expr("NULL")
 		} else {
 			updates[column] = fv.Interface()

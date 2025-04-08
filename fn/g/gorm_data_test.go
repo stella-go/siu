@@ -9,6 +9,7 @@ import (
 	"github.com/stella-go/siu/t/n"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var (
@@ -32,7 +33,9 @@ func (s *TbStudents) String() string {
 
 func TestMain(m *testing.M) {
 	dsn := "root:root@tcp(127.0.0.1:3306)/test?parseTime=true&collation=utf8_bin&charset=utf8"
-	c, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	c, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -70,10 +73,11 @@ func TestCreate(t *testing.T) {
 	}
 	{
 		s := &TbStudents{Age: st.NullInt, LastTime: st.NullTime}
-		err := Create(db, s)
+		id, err := Create2(db, s)
 		if err != nil {
 			t.Fatal(err)
 		}
+		t.Log("-----id:", id)
 	}
 }
 func TestUpdate(t *testing.T) {
@@ -85,7 +89,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestUpdate2(t *testing.T) {
-	s := &TbStudents{Id: &n.Int{Val: 1}, Name: &n.String{Val: "Tom"}, CreateTime: &n.Time{Val: time.Now()}}
+	s := &TbStudents{Id: &n.Int{Val: 1}, Age: st.NullInt, Name: &n.String{Val: "Tom"}, CreateTime: &n.Time{Val: time.Now()}}
 	_, err := Update2(db, s)
 	if err != nil {
 		t.Fatal(err)
