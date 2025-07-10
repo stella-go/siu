@@ -55,6 +55,7 @@ const (
 	loggerLevelEnvKey        = loggerEnvKey + ".level"
 	loggerPatternEnvKey      = loggerEnvKey + ".pattern"
 	loggerDaliyEnvKey        = loggerEnvKey + ".daliy"
+	loggerDailyEnvKey        = loggerEnvKey + ".daily"
 	loggerPathEnvKey         = loggerEnvKey + ".path"
 	loggerFileEnvKey         = loggerEnvKey + ".file"
 	loggerMaxFilesEnvKey     = loggerEnvKey + ".maxFiles"
@@ -165,7 +166,7 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	tag := environment.GetStringOr(loggerTagEnvKey, "[SIU]")
 	logLevel := logger.Parse(environment.GetStringOr(loggerLevelEnvKey, "info"))
 	logPattern := environment.GetStringOr(loggerPatternEnvKey, "%d{06-01-02.15:04:05.000} [%g] %p %c - %m")
-	daily := environment.GetBoolOr(loggerDaliyEnvKey, true)
+	daily := environment.GetBoolOr(loggerDailyEnvKey, environment.GetBoolOr(loggerDailyEnvKey, true))
 	filePath := environment.GetStringOr(loggerPathEnvKey, ".")
 	fileName := environment.GetStringOr(loggerFileEnvKey, "stdout")
 	maxFiles := environment.GetIntOr(loggerMaxFilesEnvKey, 30)
