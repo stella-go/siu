@@ -134,6 +134,7 @@ func TestRun(t *testing.T) {
 	os.Setenv("STELLA_LOGGER_LEVEL", "debug")
 	os.Setenv("STELLA_LOGGER_TAG", "[SIU]")
 	os.Setenv("STELLA_LOGGER_PATTERN", "%d{2006-01-02T15:04:05} %c %p [%g] - %l{7} %m")
+	os.Setenv("STELLA_LOGGER_SYSLOG", "127.0.0.1:514")
 	os.Setenv("STELLA_ZOOKEEPER", "zookeeperxxx")
 	os.Setenv("STELLA_ZOOKEEPER_SERVERS", "127.x0x.0.1:x21x81")
 	os.Setenv("STELLA_MIDDLEWARE_CROS_DISABLE", "true")

@@ -60,6 +60,7 @@ const (
 	loggerFileEnvKey         = loggerEnvKey + ".file"
 	loggerMaxFilesEnvKey     = loggerEnvKey + ".maxFiles"
 	loggerMaxFileSizesEnvKey = loggerEnvKey + ".maxFileSize"
+	loggerSyslogEnvKey       = loggerEnvKey + ".syslog"
 
 	BuildinRegisterOrder = 0
 	BeanRegisterOrder
@@ -172,6 +173,7 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	maxFiles := environment.GetIntOr(loggerMaxFilesEnvKey, 30)
 	maxFileSize := environment.GetIntOr(loggerMaxFileSizesEnvKey, 200)
 
+	var w io.Writer
 	cfg := &logger.RotateConfig{
 		Enable:      true,
 		Daily:       daily,
@@ -184,11 +186,42 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	if err != nil {
 		panic(err)
 	}
+	w = writer
+	if syslog, ok := environment.GetString(loggerSyslogEnvKey); ok {
+		hostname, err := os.Hostname()
+		if err != nil || hostname == "" {
+			hostname = "unknown"
+		}
+		protocol := ""
+		if strings.HasPrefix(syslog, "udp:") {
+			protocol = "udp"
+			syslog = strings.TrimPrefix(syslog, "udp:")
+		} else if strings.HasPrefix(syslog, "tcp:") {
+			protocol = "tcp"
+			syslog = strings.TrimPrefix(syslog, "tcp:")
+		} else {
+			protocol = "udp"
+		}
+		sysWriter, err := logger.NewConfigSyslogWriter(&logger.SyslogConfig{
+			Facility: logger.LOG_F_LOCAL5,
+			Severity: logger.LOG_S_INFO,
+			Hostname: hostname,
+			Addr:     syslog,
+			Protocol: protocol,
+			Tag:      tag,
+		})
+
+		if err != nil {
+			panic(err)
+		}
+		w = io.MultiWriter(writer, sysWriter)
+	}
+
 	var contextLogger interfaces.Logger
 	if logUse {
-		contextLogger = logger.NewRootLogger(logLevel, &logger.PatternFormatter{Pattern: logPattern}, writer).GetLogger(tag)
+		contextLogger = logger.NewRootLogger(logLevel, &logger.PatternFormatter{Pattern: logPattern}, w).GetLogger(tag)
 	} else {
-		contextLogger = newBuildinLogger(logLevel, tag, writer)
+		contextLogger = newBuildinLogger(logLevel, tag, w)
 		common.INFO("use buildin logger")
 	}
 
