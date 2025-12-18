@@ -1687,13 +1687,19 @@ func (p *Time) Scan(value interface{}) error {
 	case []byte:
 		t, err := time.ParseInLocation(time.RFC3339Nano, string(v), time.Local)
 		if err != nil {
-			return err
+			t, err = time.ParseInLocation(time.DateTime, string(v), time.Local)
+			if err != nil {
+				return err
+			}
 		}
 		p.Val = t
 	case string:
 		t, err := time.ParseInLocation(time.RFC3339Nano, v, time.Local)
 		if err != nil {
-			return err
+			t, err = time.ParseInLocation(time.DateTime, v, time.Local)
+			if err != nil {
+				return err
+			}
 		}
 		p.Val = t
 	case time.Time:
@@ -1713,9 +1719,9 @@ func (p Time) Value() (driver.Value, error) {
 func (p Time) Equals(o interface{}) bool {
 	switch t := o.(type) {
 	case Time:
-		return p.Val == t.Val
+		return p.Val.Equal(t.Val)
 	case time.Time:
-		return p.Val == t
+		return p.Val.Equal(t)
 	default:
 		return false
 	}
