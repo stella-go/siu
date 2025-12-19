@@ -26,6 +26,7 @@ import (
 	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/interfaces"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
@@ -123,6 +124,18 @@ func (p *AutoGorm) Typed() map[reflect.Type]interface{} {
 }
 
 func createGormDB(logger interfaces.Logger, conf config.TypedConfig, prefix string) (*gorm.DB, error) {
+	datasourceType := conf.GetStringOr(prefix+".type", "MYSQL")
+	switch strings.ToUpper(datasourceType) {
+	case "MYSQL", "MARIADB":
+		return createGormMySQL(logger, conf, prefix)
+	case "SQLITE", "SQLITE3":
+		return createGormSQLite(logger, conf, prefix)
+	default:
+		return nil, fmt.Errorf("gorm datasource type %s not support", datasourceType)
+	}
+}
+
+func createGormMySQL(logger interfaces.Logger, conf config.TypedConfig, prefix string) (*gorm.DB, error) {
 	user, ok1 := conf.GetString(prefix + ".user")
 	passwd, ok2 := conf.GetString(prefix + ".passwd")
 	addr, ok3 := conf.GetString(prefix + ".addr")
@@ -210,6 +223,31 @@ func createGormDB(logger interfaces.Logger, conf config.TypedConfig, prefix stri
 				return db, nil
 			}
 		}
+	}
+}
+
+func createGormSQLite(logger interfaces.Logger, conf config.TypedConfig, prefix string) (*gorm.DB, error) {
+	path, ok := conf.GetString(prefix + ".path")
+
+	if !ok {
+		return nil, fmt.Errorf("gorm sqlite datasource path can not be empty")
+	}
+
+	option := &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			SingularTable: true,
+		},
+	}
+
+	debug := conf.GetStringOr("logger.level", "info")
+	if strings.ToLower(debug) == "debug" {
+		option.Logger = &Logger{inner: logger}
+	}
+
+	if db, err := gorm.Open(sqlite.Open(path), option); err != nil {
+		return nil, err
+	} else {
+		return db, nil
 	}
 }
 
