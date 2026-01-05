@@ -1,4 +1,4 @@
-// Copyright 2010-2025 the original author or authors.
+// Copyright 2010-2026 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"syscall"
 
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 	"github.com/stella-go/logger"
 	"github.com/stella-go/siu/autoconfig"
 	"github.com/stella-go/siu/common"
@@ -54,7 +55,6 @@ const (
 	loggerTagEnvKey          = loggerEnvKey + ".tag"
 	loggerLevelEnvKey        = loggerEnvKey + ".level"
 	loggerPatternEnvKey      = loggerEnvKey + ".pattern"
-	loggerDaliyEnvKey        = loggerEnvKey + ".daliy"
 	loggerDailyEnvKey        = loggerEnvKey + ".daily"
 	loggerPathEnvKey         = loggerEnvKey + ".path"
 	loggerFileEnvKey         = loggerEnvKey + ".file"
@@ -133,6 +133,18 @@ func (p *buildinLogger) Tag() string {
 	return p.tag
 }
 
+type cronLogger struct {
+	logger interfaces.Logger
+}
+
+func (p *cronLogger) Info(format string, arr ...interface{}) {
+	p.logger.INFO(format, arr...)
+}
+func (p *cronLogger) Error(err error, format string, arr ...interface{}) {
+	arr = append(arr, err)
+	p.logger.ERROR(format, arr...)
+}
+
 type context struct {
 	environment config.TypedConfig
 	logger      interfaces.Logger
@@ -146,10 +158,25 @@ type context struct {
 	store *sync.Map
 
 	server *gin.Engine
+
+	cron *cron.Cron
 }
 
 func newContext(environment config.TypedConfig, contextLogger interfaces.Logger, server *gin.Engine) *context {
-	ctx := &context{environment, contextLogger, make([]interfaces.InjectRegister, 0), make([]interfaces.AutoFactory, 0), make([]interfaces.OrderedMiddleware, 0), make([]interfaces.Router, 0), make([]interfaces.ShutdownHook, 0), &sync.Map{}, server}
+	ctx := &context{
+		environment:   environment,
+		logger:        contextLogger,
+		registers:     make([]interfaces.InjectRegister, 0),
+		auto:          make([]interfaces.AutoFactory, 0),
+		middleware:    make([]interfaces.OrderedMiddleware, 0),
+		routers:       make([]interfaces.Router, 0),
+		shutdownHooks: make([]interfaces.ShutdownHook, 0),
+		store:         &sync.Map{},
+		server:        server,
+		cron: cron.New(cron.WithParser(cron.NewParser(
+			cron.SecondOptional|cron.Minute|cron.Hour|cron.Dom|cron.Month|cron.Dow|cron.Descriptor,
+		)), cron.WithChain(cron.Recover(&cronLogger{logger: contextLogger}))),
+	}
 	if leveledLogger, ok := contextLogger.(interfaces.LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())
 	}
@@ -331,6 +358,10 @@ func (c *context) Set(key string, value interface{}) {
 	c.store.Store(key, value)
 }
 
+func (c *context) Cron(spec string, cmd func()) {
+	c.cron.AddFunc(spec, cmd)
+}
+
 type buildinRegister struct {
 	c *context
 }
@@ -406,6 +437,8 @@ func (c *context) Run() {
 		c.server = gin.New()
 		c.server.SetTrustedProxies(nil)
 	}
+	c.cron.Start()
+	defer c.cron.Stop()
 
 	resolver := &inject.ConfigResolver{C: c.environment}
 

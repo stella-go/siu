@@ -1,4 +1,4 @@
-// Copyright 2010-2025 the original author or authors.
+// Copyright 2010-2026 the original author or authors.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -155,6 +155,11 @@ func Get(key string) (interface{}, bool) {
 func Set(key string, value interface{}) {
 	Default()
 	ctx.Set(key, value)
+}
+
+func Cron(spec string, cmd func()) {
+	Default()
+	ctx.Cron(spec, cmd)
 }
 
 func Run() {

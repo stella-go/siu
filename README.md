@@ -100,7 +100,7 @@ server:
 logger:
   siu: true
   level: info
-  daliy: true
+  daily: true
   path: ./logs
   file: log.txt
   maxFiles: 31
