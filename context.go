@@ -137,12 +137,8 @@ type cronLogger struct {
 	logger interfaces.Logger
 }
 
-func (p *cronLogger) Info(format string, arr ...interface{}) {
-	p.logger.INFO(format, arr...)
-}
-func (p *cronLogger) Error(err error, format string, arr ...interface{}) {
-	arr = append(arr, err)
-	p.logger.ERROR(format, arr...)
+func (p *cronLogger) Printf(format string, v ...interface{}) {
+	p.logger.ERROR(format, v...)
 }
 
 type context struct {
@@ -175,7 +171,7 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 		server:        server,
 		cron: cron.New(cron.WithParser(cron.NewParser(
 			cron.SecondOptional|cron.Minute|cron.Hour|cron.Dom|cron.Month|cron.Dow|cron.Descriptor,
-		)), cron.WithChain(cron.Recover(&cronLogger{logger: contextLogger}))),
+		)), cron.WithChain(cron.Recover(cron.PrintfLogger(&cronLogger{logger: contextLogger})))),
 	}
 	if leveledLogger, ok := contextLogger.(interfaces.LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())

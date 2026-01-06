@@ -37,6 +37,12 @@ type S struct {
 
 func (p *S) Init() {
 	fmt.Printf("siu test init\n")
+	siu.Cron("*/5 * * * * ?", func() {
+		fmt.Println("cron", time.Now())
+	})
+	siu.Cron("*/5 * * * * ?", func() {
+		panic(fmt.Errorf("cron panic"))
+	})
 }
 
 func (p *S) Condition() bool {
@@ -123,7 +129,7 @@ func TestRun(t *testing.T) {
 		listener.Accept()
 	}()
 	go func() {
-		time.Sleep(1 * time.Second)
+		time.Sleep(15 * time.Second)
 		http.Get("http://localhost:8080/hi")
 		http.Get("http://localhost:8080/abc")
 		siu.INFO("__LINE__ %s", "hello")
