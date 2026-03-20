@@ -523,6 +523,8 @@ func (c *context) Run() {
 			}
 		}
 	}
+	inject.InvokeReady()
+
 	ip := c.environment.GetStringOr("server.ip", "0.0.0.0")
 	port := c.environment.GetStringOr("server.port", "8080")
 	go func() {

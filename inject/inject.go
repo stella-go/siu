@@ -35,7 +35,14 @@ type Initializable interface {
 	Init()
 }
 
+type Readyable interface {
+	// run after all routes registered, before server start
+	Ready()
+}
+
 var initializableType = reflect.TypeOf((*Initializable)(nil)).Elem()
+var readyableType = reflect.TypeOf((*Readyable)(nil)).Elem()
+var readyables []Readyable
 
 type ValueResolver interface {
 	Resolve(string) (interface{}, bool)
@@ -130,7 +137,22 @@ func inject(r ValueResolver, obj interface{}, visited map[reflect.Type]reflect.V
 		method.Call(nil)
 		common.DEBUG("Execute the initialization method of %s", refType)
 	}
+	if prefType.Implements(readyableType) {
+		readyables = append(readyables, obj.(Readyable))
+		common.DEBUG("Collect readyable object %s", prefType)
+	} else if refType.Implements(readyableType) {
+		readyables = append(readyables, refValue.Addr().Interface().(Readyable))
+		common.DEBUG("Collect readyable object %s", refType)
+	}
 	return nil
+}
+
+func InvokeReady() {
+	for _, r := range readyables {
+		r.Ready()
+		common.DEBUG("Execute the ready method of %s", reflect.TypeOf(r))
+	}
+	readyables = nil
 }
 
 func setValue(r ValueResolver, field reflect.StructField, val reflect.Value, visited map[reflect.Type]reflect.Value) error {
