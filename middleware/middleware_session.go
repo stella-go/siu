@@ -108,7 +108,7 @@ func (p *MiddlewareSession) Order() int {
 
 func (p *MiddlewareSession) Get(key string) (string, bool) {
 	if p.Redis != nil {
-		cmd := p.Redis.Get(context.Background(), key)
+		cmd := p.Redis.Get(context.Background(), "session#"+key)
 		value := cmd.Val()
 		if value != "" {
 			return value, true

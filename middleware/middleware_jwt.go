@@ -15,13 +15,14 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/t"
 )
@@ -39,15 +40,16 @@ const (
 
 const (
 	JwtCookieKey         = "Authorization"
+	ApplicationKey       = "application"
 	JwtTokenContextKey   = "jwt"
 	JwtSubjectContextKey = "subject"
 )
 
 type Subject struct {
-	Id     int64                  `json:"id"`
-	Name   string                 `json:"name"`
-	Roles  []string               `json:"roles"`
-	Others map[string]interface{} `json:"others"`
+	Id     int64          `json:"id"`
+	Name   string         `json:"name"`
+	Roles  []string       `json:"roles"`
+	Others map[string]any `json:"others"`
 }
 
 type MiddlewareJwt struct {
@@ -61,7 +63,18 @@ type MiddlewareJwt struct {
 func (p *MiddlewareJwt) Init() {
 	p.cookieDomain = p.Conf.GetStringOr(JwtCookiedomainKey, "")
 	p.expireSeconds = p.Conf.GetIntOr(JwtExpiresecondsKey, 3600)
-	p.secret = p.Conf.GetStringOr(JwtSecretKey, uuid.NewString())
+	secret, ok := p.Conf.GetString(JwtSecretKey)
+	if !ok || secret == "" {
+		if app, ok := p.Conf.GetString(ApplicationKey); ok {
+			h := sha256.New()
+			h.Write([]byte(app))
+			s := h.Sum(nil)
+			secret = hex.EncodeToString(s)
+		} else {
+			panic(fmt.Errorf("jwt secret not found"))
+		}
+	}
+	p.secret = secret
 	excludes := p.Conf.GetOr(JwtExcludesKey, []string{"/login", "/admin/login", "/api/login"})
 	if e, ok := excludes.([]string); ok {
 		p.excludes = e
@@ -185,7 +198,7 @@ func JwtSign(subject *Subject, secret string, expire time.Duration) (string, err
 }
 
 func JwtVerify(tokenString string, secret string) (*Subject, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("the signature method is not supported: %v", token.Header["alg"])
 		}

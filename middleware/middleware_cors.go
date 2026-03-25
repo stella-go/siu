@@ -22,31 +22,31 @@ import (
 )
 
 const (
-	CROSMiddleDisableKey  = "middleware.cros.disable"
-	CROSMiddleWildcardKey = "middleware.cros.wildcard"
-	CROSMiddleExposedKey  = "middleware.cros.expose"
-	CROSMiddleOrder       = 20
+	CORSMiddleDisableKey  = "middleware.cors.disable"
+	CORSMiddleWildcardKey = "middleware.cors.wildcard"
+	CORSMiddleExposedKey  = "middleware.cors.expose"
+	CORSMiddleOrder       = 20
 )
 
-type MiddlewareCROS struct {
+type MiddlewareCORS struct {
 	Conf     config.TypedConfig `@siu:"name='environment',default='type'"`
 	wildcard bool
 	expose   string
 }
 
-func (p *MiddlewareCROS) Init() {
-	p.wildcard = p.Conf.GetBoolOr(CROSMiddleWildcardKey, true)
-	p.expose = p.Conf.GetStringOr(CROSMiddleExposedKey, "*")
+func (p *MiddlewareCORS) Init() {
+	p.wildcard = p.Conf.GetBoolOr(CORSMiddleWildcardKey, true)
+	p.expose = p.Conf.GetStringOr(CORSMiddleExposedKey, "*")
 }
 
-func (p *MiddlewareCROS) Condition() bool {
-	if v, ok := p.Conf.GetBool(CROSMiddleDisableKey); ok && v {
+func (p *MiddlewareCORS) Condition() bool {
+	if v, ok := p.Conf.GetBool(CORSMiddleDisableKey); ok && v {
 		return false
 	}
 	return true
 }
 
-func (p *MiddlewareCROS) Function() gin.HandlerFunc {
+func (p *MiddlewareCORS) Function() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if p.wildcard {
 			c.Header("Access-Control-Allow-Origin", "*")
@@ -77,6 +77,6 @@ func (p *MiddlewareCROS) Function() gin.HandlerFunc {
 	}
 }
 
-func (p *MiddlewareCROS) Order() int {
-	return CROSMiddleOrder
+func (p *MiddlewareCORS) Order() int {
+	return CORSMiddleOrder
 }

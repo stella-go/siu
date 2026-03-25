@@ -58,7 +58,7 @@ func (p *AutoMysql) OnStart() error {
 		p.dbs[MySQLDatasourceKey] = db
 	}
 
-	datasourcesMap, ok := datasources.(map[string]interface{})
+	datasourcesMap, ok := datasources.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -92,19 +92,19 @@ func (*AutoMysql) Name() string {
 	return MySQLDatasourceKey
 }
 
-func (p *AutoMysql) Named() map[string]interface{} {
-	n := make(map[string]interface{})
+func (p *AutoMysql) Named() map[string]any {
+	n := make(map[string]any)
 	for k, v := range p.dbs {
 		n[k] = v
 	}
 	return n
 }
 
-func (p *AutoMysql) Typed() map[reflect.Type]interface{} {
+func (p *AutoMysql) Typed() map[reflect.Type]any {
 	if len(p.dbs) == 1 {
 		for _, v := range p.dbs {
 			refType := reflect.TypeOf((*sql.DB)(nil))
-			return map[reflect.Type]interface{}{
+			return map[reflect.Type]any{
 				refType: v,
 			}
 		}
@@ -142,11 +142,11 @@ func createDB(conf config.TypedConfig, prefix string) (*sql.DB, error) {
 		switch cparams := cparams.(type) {
 		case map[string]string:
 			params = cparams
-		case map[string]interface{}:
+		case map[string]any:
 			for k, v := range cparams {
 				params[k] = fmt.Sprintf("%s", v)
 			}
-		case map[interface{}]interface{}:
+		case map[any]any:
 			for k, v := range cparams {
 				key := fmt.Sprintf("%v", k)
 				value := fmt.Sprintf("%v", v)

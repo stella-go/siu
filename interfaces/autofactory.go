@@ -24,6 +24,6 @@ type AutoFactory interface {
 	OnStart() error
 	OnStop() error
 	Name() string
-	Named() map[string]interface{}
-	Typed() map[reflect.Type]interface{}
+	Named() map[string]any
+	Typed() map[reflect.Type]any
 }

@@ -67,7 +67,7 @@ func (p *AutoGorm) OnStart() error {
 		p.dbs[GormDatasourceKey] = db
 	}
 
-	datasourcesMap, ok := datasources.(map[string]interface{})
+	datasourcesMap, ok := datasources.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -103,19 +103,19 @@ func (*AutoGorm) Name() string {
 	return GormDatasourceKey
 }
 
-func (p *AutoGorm) Named() map[string]interface{} {
-	n := make(map[string]interface{})
+func (p *AutoGorm) Named() map[string]any {
+	n := make(map[string]any)
 	for k, v := range p.dbs {
 		n[k] = v
 	}
 	return n
 }
 
-func (p *AutoGorm) Typed() map[reflect.Type]interface{} {
+func (p *AutoGorm) Typed() map[reflect.Type]any {
 	if len(p.dbs) == 1 {
 		for _, v := range p.dbs {
 			refType := reflect.TypeOf((*gorm.DB)(nil))
-			return map[reflect.Type]interface{}{
+			return map[reflect.Type]any{
 				refType: v,
 			}
 		}
@@ -165,11 +165,11 @@ func createGormMySQL(logger interfaces.Logger, conf config.TypedConfig, prefix s
 		switch cparams := cparams.(type) {
 		case map[string]string:
 			params = cparams
-		case map[string]interface{}:
+		case map[string]any:
 			for k, v := range cparams {
 				params[k] = fmt.Sprintf("%s", v)
 			}
-		case map[interface{}]interface{}:
+		case map[any]any:
 			for k, v := range cparams {
 				key := fmt.Sprintf("%v", k)
 				value := fmt.Sprintf("%v", v)
@@ -258,13 +258,13 @@ type Logger struct {
 func (p *Logger) LogMode(level logger.LogLevel) logger.Interface {
 	return p
 }
-func (p *Logger) Info(ctx context.Context, format string, args ...interface{}) {
+func (p *Logger) Info(ctx context.Context, format string, args ...any) {
 	p.inner.INFO("%s", "[GORM] "+fmt.Sprintf(format, args...))
 }
-func (p *Logger) Warn(ctx context.Context, format string, args ...interface{}) {
+func (p *Logger) Warn(ctx context.Context, format string, args ...any) {
 	p.inner.WARN("%s", "[GORM] "+fmt.Sprintf(format, args...))
 }
-func (p *Logger) Error(ctx context.Context, format string, args ...interface{}) {
+func (p *Logger) Error(ctx context.Context, format string, args ...any) {
 	p.inner.ERROR("%s", "[GORM] "+fmt.Sprintf(format, args...))
 }
 func (p *Logger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {

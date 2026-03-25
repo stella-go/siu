@@ -31,7 +31,7 @@ func Create2[T any](db *gorm.DB, s *T) (int64, error) {
 	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
-	values := make(map[string]interface{})
+	values := make(map[string]any)
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
 		setting := schema.ParseTagSetting(f.Tag.Get("gorm"), ";")
@@ -101,7 +101,7 @@ func Update2[T any](db *gorm.DB, s *T) (int64, error) {
 	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
-	updates := make(map[string]interface{})
+	updates := make(map[string]any)
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
 		setting := schema.ParseTagSetting(f.Tag.Get("gorm"), ";")

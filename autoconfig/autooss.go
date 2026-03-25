@@ -32,7 +32,7 @@ const (
 	OssAkKey             = OssKey + ".ak"
 	OssSkKey             = OssKey + ".sk"
 	OssRegionKey         = OssKey + ".region"
-	OssDdisableSSLKey    = OssKey + ".disable-ssl"
+	OssDisableSSLKey     = OssKey + ".disable-ssl"
 	OssForcePathStyleKey = OssKey + ".force-path-style"
 
 	OssOrder = 40
@@ -67,7 +67,7 @@ func (p *AutoOss) OnStart() error {
 		return t.Errorf("oss sk not found")
 	}
 	region := p.Conf.GetStringOr(OssRegionKey, "default")
-	disableSSL := p.Conf.GetBoolOr(OssDdisableSSLKey, false)
+	disableSSL := p.Conf.GetBoolOr(OssDisableSSLKey, false)
 	forcePathStyle := p.Conf.GetBoolOr(OssForcePathStyleKey, true)
 	creds := credentials.NewStaticCredentials(ak, sk, "")
 	_, err := creds.Get()
@@ -104,15 +104,15 @@ func (*AutoOss) Name() string {
 	return OssKey
 }
 
-func (p *AutoOss) Named() map[string]interface{} {
-	return map[string]interface{}{
+func (p *AutoOss) Named() map[string]any {
+	return map[string]any{
 		OssKey: p.client,
 	}
 }
 
-func (p *AutoOss) Typed() map[reflect.Type]interface{} {
+func (p *AutoOss) Typed() map[reflect.Type]any {
 	refType := reflect.TypeOf((*s3.S3)(nil))
-	return map[reflect.Type]interface{}{
+	return map[reflect.Type]any{
 		refType: p.client,
 	}
 }

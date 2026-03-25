@@ -17,10 +17,10 @@ package interfaces
 import "github.com/stella-go/logger"
 
 type Logger interface {
-	DEBUG(format string, arr ...interface{})
-	INFO(format string, arr ...interface{})
-	WARN(format string, arr ...interface{})
-	ERROR(format string, arr ...interface{})
+	DEBUG(format string, arr ...any)
+	INFO(format string, arr ...any)
+	WARN(format string, arr ...any)
+	ERROR(format string, arr ...any)
 }
 
 type LeveledLogger interface {
@@ -28,7 +28,7 @@ type LeveledLogger interface {
 	Level() logger.Level
 }
 
-type TagedLogger interface {
+type TaggedLogger interface {
 	Logger
 	Tag() string
 }

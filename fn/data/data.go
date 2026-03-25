@@ -18,10 +18,10 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/stella-go/siu/fn"
 	"github.com/stella-go/siu/t"
 	"github.com/stella-go/siu/t/n"
 )
@@ -40,9 +40,9 @@ const (
 )
 
 type DataSource interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Exec(query string, args ...any) (sql.Result, error)
+	QueryRow(query string, args ...any) *sql.Row
+	Query(query string, args ...any) (*sql.Rows, error)
 }
 
 func Create[T any](db DataSource, s *T) (int64, error) {
@@ -60,7 +60,7 @@ func Create[T any](db DataSource, s *T) (int64, error) {
 	table := toSnakeCase(rt.Name())
 	columns := make([]string, 0)
 	holders := make([]string, 0)
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	SQL := "insert into `%s` (%s) values (%s)"
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
@@ -114,8 +114,8 @@ func Update[T any](db DataSource, s *T) (int64, error) {
 	table := toSnakeCase(rt.Name())
 	set := make([]string, 0)
 	where := make([]string, 0)
-	args := make([]interface{}, 0)
-	whereArgs := make([]interface{}, 0)
+	args := make([]any, 0)
+	whereArgs := make([]any, 0)
 	SQL := "update `%s` set %s where %s"
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
@@ -175,8 +175,8 @@ func Update2[T any](db DataSource, s *T) (int64, error) {
 	table := toSnakeCase(rt.Name())
 	set := make([]string, 0)
 	where := make([]string, 0)
-	args := make([]interface{}, 0)
-	whereArgs := make([]interface{}, 0)
+	args := make([]any, 0)
+	whereArgs := make([]any, 0)
 	SQL := "update `%s` set %s where %s"
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
@@ -237,7 +237,7 @@ func Query[T any](db DataSource, s *T) (*T, error) {
 	}
 	table := toSnakeCase(rt.Name())
 	where := make([]string, 0)
-	whereArgs := make([]interface{}, 0)
+	whereArgs := make([]any, 0)
 	SQL := "select * from `%s` %s limit 1"
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
@@ -304,7 +304,7 @@ func QueryMany[T any](db DataSource, s *T, page int, size int) (int, []*T, error
 
 	table := toSnakeCase(rt.Name())
 	where := make([]string, 0)
-	whereArgs := make([]interface{}, 0)
+	whereArgs := make([]any, 0)
 	rv := reflect.ValueOf(s)
 	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
@@ -372,7 +372,7 @@ func QueryMany[T any](db DataSource, s *T, page int, size int) (int, []*T, error
 	return count, results, nil
 }
 
-func QueryExec[T any](db DataSource, SQL string, args ...interface{}) (*T, error) {
+func QueryExec[T any](db DataSource, SQL string, args ...any) (*T, error) {
 	var empty T
 	rt := reflect.TypeOf(empty)
 	ret, scan, err := newScan[T](rt)
@@ -390,7 +390,7 @@ func QueryExec[T any](db DataSource, SQL string, args ...interface{}) (*T, error
 	return ret, nil
 }
 
-func QueryExecMany[T any](db DataSource, SQL string, args ...interface{}) ([]*T, error) {
+func QueryExecMany[T any](db DataSource, SQL string, args ...any) ([]*T, error) {
 	var empty T
 	rt := reflect.TypeOf(empty)
 	rows, err := db.Query(SQL, args...)
@@ -415,13 +415,13 @@ func QueryExecMany[T any](db DataSource, SQL string, args ...interface{}) ([]*T,
 	return results, nil
 }
 
-func newScan[T any](rt reflect.Type) (*T, []interface{}, error) {
+func newScan[T any](rt reflect.Type) (*T, []any, error) {
 	rv := reflect.New(rt)
 	s := rv.Interface().(*T)
 	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
-	scan := make([]interface{}, 0)
+	scan := make([]any, 0)
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
 		tag, err := extractTag(f.Tag.Get(tag_free))
@@ -451,7 +451,7 @@ func Delete[T any](db DataSource, s *T) (int64, error) {
 	}
 	table := toSnakeCase(rt.Name())
 	where := make([]string, 0)
-	whereArgs := make([]interface{}, 0)
+	whereArgs := make([]any, 0)
 	SQL := "delete from `%s` where %s"
 	for i := 0; i < rt.NumField(); i++ {
 		f := rt.Field(i)
@@ -492,7 +492,7 @@ func Delete[T any](db DataSource, s *T) (int64, error) {
 	return ret.RowsAffected()
 }
 
-func parseValue(v interface{}, round string) interface{} {
+func parseValue(v any, round string) any {
 	if t.IsNull(v) {
 		return n.NULL
 	}
@@ -531,11 +531,7 @@ func parseValue(v interface{}, round string) interface{} {
 	}
 }
 func toSnakeCase(s string) string {
-	re := regexp.MustCompile(`[A-Z]`)
-	snake := re.ReplaceAllStringFunc(s, func(s string) string {
-		return "_" + strings.ToLower(s[:1])
-	})
-	return strings.Trim(snake, "_")
+	return fn.ToSnakeCase(s)
 }
 
 func extractTag(tag string) (map[string]string, error) {

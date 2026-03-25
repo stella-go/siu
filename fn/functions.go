@@ -14,10 +14,25 @@
 
 package fn
 
+import (
+	"regexp"
+	"strings"
+)
+
 func IfElse[T any](b bool, t T, f T) T {
 	if b {
 		return t
 	} else {
 		return f
 	}
+}
+
+var snakeRe = regexp.MustCompile(`[A-Z]`)
+
+// ToSnakeCase converts a CamelCase string to snake_case.
+func ToSnakeCase(s string) string {
+	snake := snakeRe.ReplaceAllStringFunc(s, func(s string) string {
+		return "_" + strings.ToLower(s[:1])
+	})
+	return strings.Trim(snake, "_")
 }

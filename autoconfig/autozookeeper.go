@@ -73,15 +73,15 @@ func (*AutoZookeeper) Name() string {
 	return ZookeeperKey
 }
 
-func (p *AutoZookeeper) Named() map[string]interface{} {
-	return map[string]interface{}{
+func (p *AutoZookeeper) Named() map[string]any {
+	return map[string]any{
 		ZookeeperKey: p.conn,
 	}
 }
 
-func (p *AutoZookeeper) Typed() map[reflect.Type]interface{} {
+func (p *AutoZookeeper) Typed() map[reflect.Type]any {
 	refType := reflect.TypeOf((*zk.Conn)(nil))
-	return map[reflect.Type]interface{}{
+	return map[reflect.Type]any{
 		refType: p.conn,
 	}
 }

@@ -67,13 +67,13 @@ type R1 struct{}
 
 var e = &config.DecryptEnvironment{Cipher: &C{}}
 
-func (*R1) Named() map[string]interface{} {
-	return map[string]interface{}{
+func (*R1) Named() map[string]any {
+	return map[string]any{
 		"environment": e,
 	}
 }
-func (*R1) Typed() map[reflect.Type]interface{} {
-	return map[reflect.Type]interface{}{
+func (*R1) Typed() map[reflect.Type]any {
+	return map[reflect.Type]any{
 		reflect.TypeOf((*config.TypedConfig)(nil)).Elem(): e,
 	}
 }
@@ -97,13 +97,13 @@ func (p *AfterServer) Init() {
 
 var after = &AfterServer{}
 
-func (*R2) Named() map[string]interface{} {
-	return map[string]interface{}{
+func (*R2) Named() map[string]any {
+	return map[string]any{
 		"after": after,
 	}
 }
-func (*R2) Typed() map[reflect.Type]interface{} {
-	return map[reflect.Type]interface{}{
+func (*R2) Typed() map[reflect.Type]any {
+	return map[reflect.Type]any{
 		// reflect.TypeOf((*interfaces.Logger)(nil)).Elem(): l,
 	}
 }
@@ -132,7 +132,7 @@ func TestRun(t *testing.T) {
 		time.Sleep(15 * time.Second)
 		http.Get("http://localhost:8080/hi")
 		http.Get("http://localhost:8080/abc")
-		siu.INFO("__LINE__ %s", "hello")
+		siu.INFO("__sLINE__ %s", "hello")
 		syscall.Kill(os.Getpid(), 15)
 	}()
 	os.Setenv("STELLA_SERVER_MODE", "debug")
@@ -143,7 +143,7 @@ func TestRun(t *testing.T) {
 	os.Setenv("STELLA_LOGGER_SYSLOG", "127.0.0.1:514")
 	os.Setenv("STELLA_ZOOKEEPER", "zookeeperxxx")
 	os.Setenv("STELLA_ZOOKEEPER_SERVERS", "127.x0x.0.1:x21x81")
-	os.Setenv("STELLA_MIDDLEWARE_CROS_DISABLE", "true")
+	os.Setenv("STELLA_MIDDLEWARE_CORS_DISABLE", "true")
 	siu.Register(&R2{}, &R1{})
 	siu.Use(&S{})
 	siu.Route(&Router{})

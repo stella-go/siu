@@ -11,7 +11,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/stella-go/logger v1.1.0
+	github.com/stella-go/logger v1.1.1
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/sqlite v1.6.0

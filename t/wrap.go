@@ -44,7 +44,7 @@ var (
 	NullTime       = &n.Time{}
 )
 
-func IsNull(v interface{}) bool {
+func IsNull(v any) bool {
 	if v == nil {
 		return true
 	}
@@ -227,7 +227,7 @@ func Error(err error) *stackerror.Error {
 	return stackerror.NewError(3, err)
 }
 
-func Errorf(format string, a ...interface{}) *stackerror.Error {
+func Errorf(format string, a ...any) *stackerror.Error {
 	err := fmt.Errorf(format, a...)
 	return stackerror.NewError(3, err)
 }

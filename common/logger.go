@@ -36,50 +36,22 @@ func SetTag(t string) {
 	tag = t
 }
 
-func DEBUG(format string, v ...interface{}) {
-	if level <= logger.DebugLevel {
+func logf(lv logger.Level, levelStr string, format string, v ...any) {
+	if level <= lv {
 		if len(v) > 0 {
 			if _, ok := v[len(v)-1].(error); ok {
 				format += " %v"
 			}
 		}
 		msg := fmt.Sprintf(format, v...)
-		log.Printf("DEBUG - %s %s", tag, msg)
+		log.Printf("%s - %s %s", levelStr, tag, msg)
 	}
 }
 
-func INFO(format string, v ...interface{}) {
-	if level <= logger.InfoLevel {
-		if len(v) > 0 {
-			if _, ok := v[len(v)-1].(error); ok {
-				format += " %v"
-			}
-		}
-		msg := fmt.Sprintf(format, v...)
-		log.Printf("INFO  - %s %s", tag, msg)
-	}
-}
+func DEBUG(format string, v ...any) { logf(logger.DebugLevel, "DEBUG", format, v...) }
 
-func WARN(format string, v ...interface{}) {
-	if level <= logger.WarnLevel {
-		if len(v) > 0 {
-			if _, ok := v[len(v)-1].(error); ok {
-				format += " %v"
-			}
-		}
-		msg := fmt.Sprintf(format, v...)
-		log.Printf("WARN  - %s %s", tag, msg)
-	}
-}
+func INFO(format string, v ...any) { logf(logger.InfoLevel, "INFO ", format, v...) }
 
-func ERROR(format string, v ...interface{}) {
-	if level <= logger.ErrorLevel {
-		if len(v) > 0 {
-			if _, ok := v[len(v)-1].(error); ok {
-				format += " %v"
-			}
-		}
-		msg := fmt.Sprintf(format, v...)
-		log.Printf("ERROR - %s %s", tag, msg)
-	}
-}
+func WARN(format string, v ...any) { logf(logger.WarnLevel, "WARN ", format, v...) }
+
+func ERROR(format string, v ...any) { logf(logger.ErrorLevel, "ERROR", format, v...) }

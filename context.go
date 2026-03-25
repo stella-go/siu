@@ -50,17 +50,17 @@ const (
 )
 
 const (
-	loggerEnvKey             = "logger"
-	loggerUseEnvKey          = loggerEnvKey + ".siu"
-	loggerTagEnvKey          = loggerEnvKey + ".tag"
-	loggerLevelEnvKey        = loggerEnvKey + ".level"
-	loggerPatternEnvKey      = loggerEnvKey + ".pattern"
-	loggerDailyEnvKey        = loggerEnvKey + ".daily"
-	loggerPathEnvKey         = loggerEnvKey + ".path"
-	loggerFileEnvKey         = loggerEnvKey + ".file"
-	loggerMaxFilesEnvKey     = loggerEnvKey + ".maxFiles"
-	loggerMaxFileSizesEnvKey = loggerEnvKey + ".maxFileSize"
-	loggerSyslogEnvKey       = loggerEnvKey + ".syslog"
+	loggerEnvKey            = "logger"
+	loggerUseEnvKey         = loggerEnvKey + ".siu"
+	loggerTagEnvKey         = loggerEnvKey + ".tag"
+	loggerLevelEnvKey       = loggerEnvKey + ".level"
+	loggerPatternEnvKey     = loggerEnvKey + ".pattern"
+	loggerDailyEnvKey       = loggerEnvKey + ".daily"
+	loggerPathEnvKey        = loggerEnvKey + ".path"
+	loggerFileEnvKey        = loggerEnvKey + ".file"
+	loggerMaxFilesEnvKey    = loggerEnvKey + ".maxFiles"
+	loggerMaxFileSizeEnvKey = loggerEnvKey + ".maxFileSize"
+	loggerSyslogEnvKey      = loggerEnvKey + ".syslog"
 
 	BuildinRegisterOrder = 0
 	BeanRegisterOrder
@@ -77,52 +77,32 @@ func newBuildinLogger(logLevel logger.Level, tag string, writer io.Writer) *buil
 	return &buildinLogger{l: l, logLevel: logLevel, tag: tag}
 }
 
-func (p *buildinLogger) DEBUG(format string, arr ...interface{}) {
-	if p.logLevel <= logger.DebugLevel {
+func (p *buildinLogger) logf(lv logger.Level, levelStr string, format string, arr ...any) {
+	if p.logLevel <= lv {
 		if len(arr) > 0 {
 			if _, ok := arr[len(arr)-1].(error); ok {
 				format += " %v"
 			}
 		}
 		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("DEBUG - %s %s", p.tag, msg)
+		p.l.Printf("%s - %s %s", levelStr, p.tag, msg)
 	}
 }
 
-func (p *buildinLogger) INFO(format string, arr ...interface{}) {
-	if p.logLevel <= logger.InfoLevel {
-		if len(arr) > 0 {
-			if _, ok := arr[len(arr)-1].(error); ok {
-				format += " %v"
-			}
-		}
-		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("INFO  - %s %s", p.tag, msg)
-	}
+func (p *buildinLogger) DEBUG(format string, arr ...any) {
+	p.logf(logger.DebugLevel, "DEBUG", format, arr...)
 }
 
-func (p *buildinLogger) WARN(format string, arr ...interface{}) {
-	if p.logLevel <= logger.WarnLevel {
-		if len(arr) > 0 {
-			if _, ok := arr[len(arr)-1].(error); ok {
-				format += " %v"
-			}
-		}
-		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("WARN  - %s %s", p.tag, msg)
-	}
+func (p *buildinLogger) INFO(format string, arr ...any) {
+	p.logf(logger.InfoLevel, "INFO ", format, arr...)
 }
 
-func (p *buildinLogger) ERROR(format string, arr ...interface{}) {
-	if p.logLevel <= logger.ErrorLevel {
-		if len(arr) > 0 {
-			if _, ok := arr[len(arr)-1].(error); ok {
-				format += " %v"
-			}
-		}
-		msg := fmt.Sprintf(format, arr...)
-		p.l.Printf("ERROR - %s %s", p.tag, msg)
-	}
+func (p *buildinLogger) WARN(format string, arr ...any) {
+	p.logf(logger.WarnLevel, "WARN ", format, arr...)
+}
+
+func (p *buildinLogger) ERROR(format string, arr ...any) {
+	p.logf(logger.ErrorLevel, "ERROR", format, arr...)
 }
 
 func (p *buildinLogger) Level() logger.Level {
@@ -137,7 +117,7 @@ type cronLogger struct {
 	logger interfaces.Logger
 }
 
-func (p *cronLogger) Printf(format string, v ...interface{}) {
+func (p *cronLogger) Printf(format string, v ...any) {
 	p.logger.ERROR(format, v...)
 }
 
@@ -176,12 +156,12 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 	if leveledLogger, ok := contextLogger.(interfaces.LeveledLogger); ok {
 		common.SetLevel(leveledLogger.Level())
 	}
-	if tagedLogger, ok := contextLogger.(interfaces.TagedLogger); ok {
-		common.SetTag(tagedLogger.Tag())
+	if taggedLogger, ok := contextLogger.(interfaces.TaggedLogger); ok {
+		common.SetTag(taggedLogger.Tag())
 	}
 	ctx.Register(&buildinRegister{ctx})
 	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoGorm{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{}, &autoconfig.AutoOss{}, &autoconfig.AutoCipher{})
-	ctx.Use(&middleware.MiddlewareRewrite{}, &middleware.MiddlewareAccess{}, &middleware.MiddlewareCROS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{}, &middleware.MiddlewareSession{}, &middleware.MiddlewareJwt{})
+	ctx.Use(&middleware.MiddlewareRewrite{}, &middleware.MiddlewareAccess{}, &middleware.MiddlewareCORS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{}, &middleware.MiddlewareSession{}, &middleware.MiddlewareJwt{})
 	return ctx
 }
 
@@ -190,11 +170,11 @@ func newEnvironmentContext(environment config.TypedConfig) *context {
 	tag := environment.GetStringOr(loggerTagEnvKey, "[SIU]")
 	logLevel := logger.Parse(environment.GetStringOr(loggerLevelEnvKey, "info"))
 	logPattern := environment.GetStringOr(loggerPatternEnvKey, "%d{06-01-02.15:04:05.000} [%g] %p %c - %m")
-	daily := environment.GetBoolOr(loggerDailyEnvKey, environment.GetBoolOr(loggerDailyEnvKey, true))
+	daily := environment.GetBoolOr(loggerDailyEnvKey, true)
 	filePath := environment.GetStringOr(loggerPathEnvKey, ".")
 	fileName := environment.GetStringOr(loggerFileEnvKey, "stdout")
 	maxFiles := environment.GetIntOr(loggerMaxFilesEnvKey, 30)
-	maxFileSize := environment.GetIntOr(loggerMaxFileSizesEnvKey, 200)
+	maxFileSize := environment.GetIntOr(loggerMaxFileSizeEnvKey, 200)
 
 	var w io.Writer
 	cfg := &logger.RotateConfig{
@@ -260,7 +240,7 @@ func newDefaultContext() *context {
 func (c *context) banner() {
 	if bannerFile, ok := c.environment.GetString("banner.file"); ok {
 		bannerBts, err := os.ReadFile(bannerFile)
-		if err != nil {
+		if err == nil {
 			c.logger.INFO(string(bannerBts))
 			return
 		}
@@ -268,36 +248,36 @@ func (c *context) banner() {
 	c.logger.INFO(fmt.Sprintf(defaultBanner, VERSION))
 }
 
-func (c *context) DEBUG(format string, arr ...interface{}) {
+func (c *context) DEBUG(format string, arr ...any) {
 	c.logger.DEBUG(format, arr...)
 }
 
-func (c *context) INFO(format string, arr ...interface{}) {
+func (c *context) INFO(format string, arr ...any) {
 	c.logger.INFO(format, arr...)
 }
 
-func (c *context) WARN(format string, arr ...interface{}) {
+func (c *context) WARN(format string, arr ...any) {
 	c.logger.WARN(format, arr...)
 }
 
-func (c *context) ERROR(format string, arr ...interface{}) {
+func (c *context) ERROR(format string, arr ...any) {
 	c.logger.ERROR(format, arr...)
 }
 
 type beanRegister struct {
-	obj  interface{}
+	obj  any
 	name string
 	typ  reflect.Type
 }
 
-func (p *beanRegister) Named() map[string]interface{} {
-	return map[string]interface{}{
+func (p *beanRegister) Named() map[string]any {
+	return map[string]any{
 		p.name: p.obj,
 	}
 }
 
-func (p *beanRegister) Typed() map[reflect.Type]interface{} {
-	return map[reflect.Type]interface{}{
+func (p *beanRegister) Typed() map[reflect.Type]any {
+	return map[reflect.Type]any{
 		p.typ: p.obj,
 	}
 }
@@ -306,15 +286,15 @@ func (p *beanRegister) Order() int {
 	return BeanRegisterOrder
 }
 
-func (c *context) RegisterBean(name string, typ reflect.Type, obj interface{}) {
+func (c *context) RegisterBean(name string, typ reflect.Type, obj any) {
 	c.registers = append(c.registers, &beanRegister{obj, name, typ})
 }
 
-func (c *context) GetBeanByName(name string) (interface{}, bool) {
+func (c *context) GetBeanByName(name string) (any, bool) {
 	return inject.GetNamed(name)
 }
 
-func (c *context) GetBeanByType(typ reflect.Type) (interface{}, bool) {
+func (c *context) GetBeanByType(typ reflect.Type) (any, bool) {
 	return inject.GetTyped(typ)
 }
 
@@ -346,32 +326,33 @@ func (c *context) Forward(ctx *gin.Context, path string) {
 	ctx.Abort()
 }
 
-func (c *context) Get(key string) (interface{}, bool) {
+func (c *context) Get(key string) (any, bool) {
 	return c.store.Load(key)
 }
 
-func (c *context) Set(key string, value interface{}) {
+func (c *context) Set(key string, value any) {
 	c.store.Store(key, value)
 }
 
-func (c *context) Cron(spec string, cmd func()) {
-	c.cron.AddFunc(spec, cmd)
+func (c *context) Cron(spec string, cmd func()) error {
+	_, err := c.cron.AddFunc(spec, cmd)
+	return err
 }
 
 type buildinRegister struct {
 	c *context
 }
 
-func (p *buildinRegister) Named() map[string]interface{} {
-	return map[string]interface{}{
+func (p *buildinRegister) Named() map[string]any {
+	return map[string]any{
 		"environment": p.c.environment,
 		"logger":      p.c.logger,
 		"server":      p.c.server,
 	}
 }
 
-func (p *buildinRegister) Typed() map[reflect.Type]interface{} {
-	return map[reflect.Type]interface{}{
+func (p *buildinRegister) Typed() map[reflect.Type]any {
+	return map[reflect.Type]any{
 		reflect.TypeOf((*config.TypedConfig)(nil)).Elem(): p.c.environment,
 		reflect.TypeOf((*interfaces.Logger)(nil)).Elem():  p.c.logger,
 		reflect.TypeOf((*gin.Engine)(nil)):                p.c.server,
@@ -386,7 +367,7 @@ func (c *context) register(resolver inject.ValueResolver) {
 	rs := interfaces.OrderSlice[interfaces.InjectRegister](c.registers)
 	sort.Sort(rs)
 	for _, register := range rs {
-		s := make(map[interface{}]struct{})
+		s := make(map[any]struct{})
 		for k, v := range register.Named() {
 			if _, ok := inject.GetNamed(k); !ok {
 				if _, ok := s[v]; !ok && register.Order() != BuildinRegisterOrder {
@@ -425,7 +406,7 @@ func (c *context) register(resolver inject.ValueResolver) {
 }
 
 func (c *context) Run() {
-	ctx.banner()
+	c.banner()
 
 	if c.server == nil {
 		mode := c.environment.GetStringOr("server.mode", "release")

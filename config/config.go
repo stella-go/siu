@@ -30,12 +30,12 @@ var (
 	once         = &sync.Once{}
 	rwLock       = &sync.RWMutex{}
 	defaultFiles = []string{"application.yml", "config/application.yml"}
-	env          = &environment{files: make([]string, 0), configs: make([]map[interface{}]interface{}, 0)}
+	env          = &environment{files: make([]string, 0), configs: make([]map[any]any, 0)}
 )
 
 type environment struct {
 	files   []string
-	configs []map[interface{}]interface{}
+	configs []map[any]any
 }
 
 func tryLoadConfig(files ...string) {
@@ -46,9 +46,9 @@ func tryLoadConfig(files ...string) {
 	}
 
 	names := make([]string, 0)
-	maps := make([]map[interface{}]interface{}, 0)
+	maps := make([]map[any]any, 0)
 	for _, file := range files {
-		m := make(map[interface{}]interface{})
+		m := make(map[any]any)
 		bts, err := os.ReadFile(file)
 		if err != nil {
 			continue
@@ -73,13 +73,13 @@ func LoadConfig(files ...string) {
 		alreadyDone[f] = null
 	}
 	names := make([]string, 0)
-	maps := make([]map[interface{}]interface{}, 0)
+	maps := make([]map[any]any, 0)
 	for _, file := range files {
 		if _, done := alreadyDone[file]; done {
 			common.WARN("Already load configuration file: %s", file)
 			continue
 		}
-		m := make(map[interface{}]interface{})
+		m := make(map[any]any)
 		bts, err := os.ReadFile(file)
 		if err != nil {
 			common.ERROR("Failed to read configuration file: %s, with error", file, err)
@@ -98,7 +98,7 @@ func LoadConfig(files ...string) {
 	env.configs = append(env.configs, maps...)
 }
 
-func (p *environment) tryLoadOSEnv(key string) (interface{}, bool) {
+func (p *environment) tryLoadOSEnv(key string) (any, bool) {
 	key = strings.ReplaceAll(key, ".", "_")
 	key = strings.ReplaceAll(key, "-", "_")
 	key = "STELLA_" + strings.ToUpper(key)
@@ -109,7 +109,7 @@ func (p *environment) tryLoadOSEnv(key string) (interface{}, bool) {
 	return value, true
 }
 
-func (p *environment) Get(key string) (interface{}, bool) {
+func (p *environment) Get(key string) (any, bool) {
 	once.Do(func() {
 		tryLoadConfig(defaultFiles...)
 	})
@@ -198,7 +198,7 @@ func (p *environment) GetBool(key string) (bool, bool) {
 	}
 }
 
-func (p *environment) GetOr(key string, defaultValue interface{}) interface{} {
+func (p *environment) GetOr(key string, defaultValue any) any {
 	value, ok := p.Get(key)
 	if !ok {
 		return defaultValue
@@ -234,10 +234,10 @@ func (p *environment) GetStringOr(key string, defaultValue string) string {
 	}
 }
 
-func get(config interface{}, key string) (interface{}, bool) {
+func get(config any, key string) (any, bool) {
 	switch config.(type) {
-	case map[interface{}]interface{}:
-		m := config.(map[interface{}]interface{})
+	case map[any]any:
+		m := config.(map[any]any)
 		tokens := strings.Split(key, ".")
 		tokensLen := len(tokens)
 		for i := range tokens {
@@ -245,7 +245,7 @@ func get(config interface{}, key string) (interface{}, bool) {
 			v, ok := m[tmpK]
 			if ok {
 				switch v.(type) {
-				case map[interface{}]interface{}:
+				case map[any]any:
 					leftKey := strings.Join(tokens[tokensLen-i:], ".")
 					if len(leftKey) == 0 {
 						return v, true
@@ -265,8 +265,8 @@ func get(config interface{}, key string) (interface{}, bool) {
 }
 
 type Config interface {
-	Get(key string) (interface{}, bool)
-	GetOr(key string, defaultValue interface{}) interface{}
+	Get(key string) (any, bool)
+	GetOr(key string, defaultValue any) any
 }
 
 type TypedConfig interface {
@@ -281,11 +281,11 @@ type TypedConfig interface {
 
 type ConfigurationEnvironment struct{}
 
-func (p *ConfigurationEnvironment) Get(key string) (interface{}, bool) {
+func (p *ConfigurationEnvironment) Get(key string) (any, bool) {
 	return env.Get(key)
 }
 
-func (p *ConfigurationEnvironment) GetOr(key string, defaultValue interface{}) interface{} {
+func (p *ConfigurationEnvironment) GetOr(key string, defaultValue any) any {
 	return env.GetOr(key, defaultValue)
 }
 
@@ -321,11 +321,11 @@ type DecryptEnvironment struct {
 	Cipher Cipher
 }
 
-func (p *DecryptEnvironment) Get(key string) (interface{}, bool) {
+func (p *DecryptEnvironment) Get(key string) (any, bool) {
 	return env.Get(key)
 }
 
-func (p *DecryptEnvironment) GetOr(key string, defaultValue interface{}) interface{} {
+func (p *DecryptEnvironment) GetOr(key string, defaultValue any) any {
 	return env.GetOr(key, defaultValue)
 }
 

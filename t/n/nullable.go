@@ -53,105 +53,15 @@ func (p Bool) String() string {
 	return strconv.FormatBool(p.Val)
 }
 
-func (p *Bool) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case int32:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case int16:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case int8:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case int:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case uint64:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case uint32:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case uint16:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case uint8:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case uint:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case float64:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case float32:
-		if v == 0 {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case bool:
-		p.Val = v
-	case []byte:
-		b, err := strconv.ParseBool(string(v))
-		if err != nil {
-			return err
-		}
-		p.Val = b
-	case string:
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return err
-		}
-		p.Val = b
-	case time.Time:
-		if v.IsZero() {
-			p.Val = false
-		} else {
-			p.Val = true
-		}
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to bool", value)
+func (p *Bool) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanBool(value)
+	if err != nil {
+		return err
+	}
+	p.Val = v
 	return nil
 }
 
@@ -159,7 +69,7 @@ func (p Bool) Value() (driver.Value, error) {
 	return p.Val, nil
 }
 
-func (p Bool) Equals(o interface{}) bool {
+func (p Bool) Equals(o any) bool {
 	switch t := o.(type) {
 	case Bool:
 		return p.Val == t.Val
@@ -202,57 +112,15 @@ func (p Int) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
 
-func (p *Int) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = int(v)
-	case int32:
-		p.Val = int(v)
-	case int16:
-		p.Val = int(v)
-	case int8:
-		p.Val = int(v)
-	case int:
-		p.Val = int(v)
-	case uint64:
-		p.Val = int(v)
-	case uint32:
-		p.Val = int(v)
-	case uint16:
-		p.Val = int(v)
-	case uint8:
-		p.Val = int(v)
-	case uint:
-		p.Val = int(v)
-	case float64:
-		p.Val = int(v)
-	case float32:
-		p.Val = int(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseInt(string(v), 10, 0)
-		if err != nil {
-			return err
-		}
-		p.Val = int(i)
-	case string:
-		i, err := strconv.ParseInt(v, 10, 0)
-		if err != nil {
-			return err
-		}
-		p.Val = int(i)
-	case time.Time:
-		p.Val = int(v.Unix())
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to int", value)
+func (p *Int) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanInt64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = int(v)
 	return nil
 }
 
@@ -260,7 +128,7 @@ func (p Int) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Int) Equals(o interface{}) bool {
+func (p Int) Equals(o any) bool {
 	switch t := o.(type) {
 	case Int:
 		return p.Val == t.Val
@@ -303,57 +171,15 @@ func (p Int8) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
 
-func (p *Int8) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = int8(v)
-	case int32:
-		p.Val = int8(v)
-	case int16:
-		p.Val = int8(v)
-	case int8:
-		p.Val = int8(v)
-	case int:
-		p.Val = int8(v)
-	case uint64:
-		p.Val = int8(v)
-	case uint32:
-		p.Val = int8(v)
-	case uint16:
-		p.Val = int8(v)
-	case uint8:
-		p.Val = int8(v)
-	case uint:
-		p.Val = int8(v)
-	case float64:
-		p.Val = int8(v)
-	case float32:
-		p.Val = int8(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseInt(string(v), 10, 8)
-		if err != nil {
-			return err
-		}
-		p.Val = int8(i)
-	case string:
-		i, err := strconv.ParseInt(v, 10, 8)
-		if err != nil {
-			return err
-		}
-		p.Val = int8(i)
-	case time.Time:
-		return fmt.Errorf("can't convert type %T to int8", value)
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to int8", value)
+func (p *Int8) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanInt64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = int8(v)
 	return nil
 }
 
@@ -361,7 +187,7 @@ func (p Int8) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Int8) Equals(o interface{}) bool {
+func (p Int8) Equals(o any) bool {
 	switch t := o.(type) {
 	case Int8:
 		return p.Val == t.Val
@@ -404,57 +230,15 @@ func (p Int16) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
 
-func (p *Int16) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = int16(v)
-	case int32:
-		p.Val = int16(v)
-	case int16:
-		p.Val = int16(v)
-	case int8:
-		p.Val = int16(v)
-	case int:
-		p.Val = int16(v)
-	case uint64:
-		p.Val = int16(v)
-	case uint32:
-		p.Val = int16(v)
-	case uint16:
-		p.Val = int16(v)
-	case uint8:
-		p.Val = int16(v)
-	case uint:
-		p.Val = int16(v)
-	case float64:
-		p.Val = int16(v)
-	case float32:
-		p.Val = int16(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseInt(string(v), 10, 16)
-		if err != nil {
-			return err
-		}
-		p.Val = int16(i)
-	case string:
-		i, err := strconv.ParseInt(v, 10, 16)
-		if err != nil {
-			return err
-		}
-		p.Val = int16(i)
-	case time.Time:
-		return fmt.Errorf("can't convert type %T to int16", value)
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to int16", value)
+func (p *Int16) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanInt64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = int16(v)
 	return nil
 }
 
@@ -462,7 +246,7 @@ func (p Int16) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Int16) Equals(o interface{}) bool {
+func (p Int16) Equals(o any) bool {
 	switch t := o.(type) {
 	case Int16:
 		return p.Val == t.Val
@@ -505,57 +289,15 @@ func (p Int32) String() string {
 	return strconv.FormatInt(int64(p.Val), 10)
 }
 
-func (p *Int32) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = int32(v)
-	case int32:
-		p.Val = int32(v)
-	case int16:
-		p.Val = int32(v)
-	case int8:
-		p.Val = int32(v)
-	case int:
-		p.Val = int32(v)
-	case uint64:
-		p.Val = int32(v)
-	case uint32:
-		p.Val = int32(v)
-	case uint16:
-		p.Val = int32(v)
-	case uint8:
-		p.Val = int32(v)
-	case uint:
-		p.Val = int32(v)
-	case float64:
-		p.Val = int32(v)
-	case float32:
-		p.Val = int32(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseInt(string(v), 10, 32)
-		if err != nil {
-			return err
-		}
-		p.Val = int32(i)
-	case string:
-		i, err := strconv.ParseInt(v, 10, 32)
-		if err != nil {
-			return err
-		}
-		p.Val = int32(i)
-	case time.Time:
-		p.Val = int32(v.Unix())
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to int32", value)
+func (p *Int32) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanInt64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = int32(v)
 	return nil
 }
 
@@ -563,7 +305,7 @@ func (p Int32) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Int32) Equals(o interface{}) bool {
+func (p Int32) Equals(o any) bool {
 	switch t := o.(type) {
 	case Int32:
 		return p.Val == t.Val
@@ -609,57 +351,15 @@ func (p Int64) String() string {
 	return strconv.FormatInt(p.Val, 10)
 }
 
-func (p *Int64) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = int64(v)
-	case int32:
-		p.Val = int64(v)
-	case int16:
-		p.Val = int64(v)
-	case int8:
-		p.Val = int64(v)
-	case int:
-		p.Val = int64(v)
-	case uint64:
-		p.Val = int64(v)
-	case uint32:
-		p.Val = int64(v)
-	case uint16:
-		p.Val = int64(v)
-	case uint8:
-		p.Val = int64(v)
-	case uint:
-		p.Val = int64(v)
-	case float64:
-		p.Val = int64(v)
-	case float32:
-		p.Val = int64(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseInt(string(v), 10, 64)
-		if err != nil {
-			return err
-		}
-		p.Val = int64(i)
-	case string:
-		i, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			return err
-		}
-		p.Val = int64(i)
-	case time.Time:
-		p.Val = v.UnixNano()
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to int64", value)
+func (p *Int64) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanInt64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = v
 	return nil
 }
 
@@ -667,7 +367,7 @@ func (p Int64) Value() (driver.Value, error) {
 	return p.Val, nil
 }
 
-func (p Int64) Equals(o interface{}) bool {
+func (p Int64) Equals(o any) bool {
 	switch t := o.(type) {
 	case Int64:
 		return p.Val == t.Val
@@ -710,57 +410,15 @@ func (p Uint) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
 
-func (p *Uint) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = uint(v)
-	case int32:
-		p.Val = uint(v)
-	case int16:
-		p.Val = uint(v)
-	case int8:
-		p.Val = uint(v)
-	case int:
-		p.Val = uint(v)
-	case uint64:
-		p.Val = uint(v)
-	case uint32:
-		p.Val = uint(v)
-	case uint16:
-		p.Val = uint(v)
-	case uint8:
-		p.Val = uint(v)
-	case uint:
-		p.Val = uint(v)
-	case float64:
-		p.Val = uint(v)
-	case float32:
-		p.Val = uint(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseUint(string(v), 10, 0)
-		if err != nil {
-			return err
-		}
-		p.Val = uint(i)
-	case string:
-		i, err := strconv.ParseUint(v, 10, 0)
-		if err != nil {
-			return err
-		}
-		p.Val = uint(i)
-	case time.Time:
-		return fmt.Errorf("can't convert type %T to uint", value)
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to uint", value)
+func (p *Uint) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanUint64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = uint(v)
 	return nil
 }
 
@@ -768,7 +426,7 @@ func (p Uint) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Uint) Equals(o interface{}) bool {
+func (p Uint) Equals(o any) bool {
 	switch t := o.(type) {
 	case Uint:
 		return p.Val == t.Val
@@ -811,57 +469,15 @@ func (p Uint8) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
 
-func (p *Uint8) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = uint8(v)
-	case int32:
-		p.Val = uint8(v)
-	case int16:
-		p.Val = uint8(v)
-	case int8:
-		p.Val = uint8(v)
-	case int:
-		p.Val = uint8(v)
-	case uint64:
-		p.Val = uint8(v)
-	case uint32:
-		p.Val = uint8(v)
-	case uint16:
-		p.Val = uint8(v)
-	case uint8:
-		p.Val = uint8(v)
-	case uint:
-		p.Val = uint8(v)
-	case float64:
-		p.Val = uint8(v)
-	case float32:
-		p.Val = uint8(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseUint(string(v), 10, 8)
-		if err != nil {
-			return err
-		}
-		p.Val = uint8(i)
-	case string:
-		i, err := strconv.ParseUint(v, 10, 8)
-		if err != nil {
-			return err
-		}
-		p.Val = uint8(i)
-	case time.Time:
-		return fmt.Errorf("can't convert type %T to uint8", value)
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to uint8", value)
+func (p *Uint8) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanUint64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = uint8(v)
 	return nil
 }
 
@@ -869,7 +485,7 @@ func (p Uint8) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Uint8) Equals(o interface{}) bool {
+func (p Uint8) Equals(o any) bool {
 	switch t := o.(type) {
 	case Uint8:
 		return p.Val == t.Val
@@ -915,57 +531,15 @@ func (p Uint16) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
 
-func (p *Uint16) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = uint16(v)
-	case int32:
-		p.Val = uint16(v)
-	case int16:
-		p.Val = uint16(v)
-	case int8:
-		p.Val = uint16(v)
-	case int:
-		p.Val = uint16(v)
-	case uint64:
-		p.Val = uint16(v)
-	case uint32:
-		p.Val = uint16(v)
-	case uint16:
-		p.Val = uint16(v)
-	case uint8:
-		p.Val = uint16(v)
-	case uint:
-		p.Val = uint16(v)
-	case float64:
-		p.Val = uint16(v)
-	case float32:
-		p.Val = uint16(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseUint(string(v), 10, 16)
-		if err != nil {
-			return err
-		}
-		p.Val = uint16(i)
-	case string:
-		i, err := strconv.ParseUint(v, 10, 16)
-		if err != nil {
-			return err
-		}
-		p.Val = uint16(i)
-	case time.Time:
-		return fmt.Errorf("can't convert type %T to uint16", value)
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to uint16", value)
+func (p *Uint16) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanUint64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = uint16(v)
 	return nil
 }
 
@@ -973,7 +547,7 @@ func (p Uint16) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Uint16) Equals(o interface{}) bool {
+func (p Uint16) Equals(o any) bool {
 	switch t := o.(type) {
 	case Uint16:
 		return p.Val == t.Val
@@ -1016,57 +590,15 @@ func (p Uint32) String() string {
 	return strconv.FormatUint(uint64(p.Val), 10)
 }
 
-func (p *Uint32) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = uint32(v)
-	case int32:
-		p.Val = uint32(v)
-	case int16:
-		p.Val = uint32(v)
-	case int8:
-		p.Val = uint32(v)
-	case int:
-		p.Val = uint32(v)
-	case uint64:
-		p.Val = uint32(v)
-	case uint32:
-		p.Val = uint32(v)
-	case uint16:
-		p.Val = uint32(v)
-	case uint8:
-		p.Val = uint32(v)
-	case uint:
-		p.Val = uint32(v)
-	case float64:
-		p.Val = uint32(v)
-	case float32:
-		p.Val = uint32(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseUint(string(v), 10, 32)
-		if err != nil {
-			return err
-		}
-		p.Val = uint32(i)
-	case string:
-		i, err := strconv.ParseUint(v, 10, 32)
-		if err != nil {
-			return err
-		}
-		p.Val = uint32(i)
-	case time.Time:
-		p.Val = uint32(v.Unix())
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to uint32", value)
+func (p *Uint32) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanUint64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = uint32(v)
 	return nil
 }
 
@@ -1074,7 +606,7 @@ func (p Uint32) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Uint32) Equals(o interface{}) bool {
+func (p Uint32) Equals(o any) bool {
 	switch t := o.(type) {
 	case Uint32:
 		return p.Val == t.Val
@@ -1117,57 +649,15 @@ func (p Uint64) String() string {
 	return strconv.FormatUint(p.Val, 10)
 }
 
-func (p *Uint64) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = uint64(v)
-	case int32:
-		p.Val = uint64(v)
-	case int16:
-		p.Val = uint64(v)
-	case int8:
-		p.Val = uint64(v)
-	case int:
-		p.Val = uint64(v)
-	case uint64:
-		p.Val = uint64(v)
-	case uint32:
-		p.Val = uint64(v)
-	case uint16:
-		p.Val = uint64(v)
-	case uint8:
-		p.Val = uint64(v)
-	case uint:
-		p.Val = uint64(v)
-	case float64:
-		p.Val = uint64(v)
-	case float32:
-		p.Val = uint64(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseUint(string(v), 10, 64)
-		if err != nil {
-			return err
-		}
-		p.Val = i
-	case string:
-		i, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			return err
-		}
-		p.Val = i
-	case time.Time:
-		p.Val = uint64(v.UnixNano())
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to uint64", value)
+func (p *Uint64) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanUint64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = v
 	return nil
 }
 
@@ -1175,7 +665,7 @@ func (p Uint64) Value() (driver.Value, error) {
 	return int64(p.Val), nil
 }
 
-func (p Uint64) Equals(o interface{}) bool {
+func (p Uint64) Equals(o any) bool {
 	switch t := o.(type) {
 	case Uint64:
 		return p.Val == t.Val
@@ -1218,57 +708,15 @@ func (p Float32) String() string {
 	return strconv.FormatFloat(float64(p.Val), 'f', -1, 32)
 }
 
-func (p *Float32) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = float32(v)
-	case int32:
-		p.Val = float32(v)
-	case int16:
-		p.Val = float32(v)
-	case int8:
-		p.Val = float32(v)
-	case int:
-		p.Val = float32(v)
-	case uint64:
-		p.Val = float32(v)
-	case uint32:
-		p.Val = float32(v)
-	case uint16:
-		p.Val = float32(v)
-	case uint8:
-		p.Val = float32(v)
-	case uint:
-		p.Val = float32(v)
-	case float64:
-		p.Val = float32(v)
-	case float32:
-		p.Val = float32(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseFloat(string(v), 32)
-		if err != nil {
-			return err
-		}
-		p.Val = float32(i)
-	case string:
-		i, err := strconv.ParseFloat(v, 32)
-		if err != nil {
-			return err
-		}
-		p.Val = float32(i)
-	case time.Time:
-		p.Val = float32(v.Unix())
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to float32", value)
+func (p *Float32) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanFloat64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = float32(v)
 	return nil
 }
 
@@ -1276,7 +724,7 @@ func (p Float32) Value() (driver.Value, error) {
 	return float64(p.Val), nil
 }
 
-func (p Float32) Equals(o interface{}) bool {
+func (p Float32) Equals(o any) bool {
 	switch t := o.(type) {
 	case Float32:
 		return p.Val == t.Val
@@ -1319,57 +767,15 @@ func (p Float64) String() string {
 	return strconv.FormatFloat(float64(p.Val), 'f', -1, 32)
 }
 
-func (p *Float64) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = float64(v)
-	case int32:
-		p.Val = float64(v)
-	case int16:
-		p.Val = float64(v)
-	case int8:
-		p.Val = float64(v)
-	case int:
-		p.Val = float64(v)
-	case uint64:
-		p.Val = float64(v)
-	case uint32:
-		p.Val = float64(v)
-	case uint16:
-		p.Val = float64(v)
-	case uint8:
-		p.Val = float64(v)
-	case uint:
-		p.Val = float64(v)
-	case float64:
-		p.Val = float64(v)
-	case float32:
-		p.Val = float64(v)
-	case bool:
-		if v {
-			p.Val = 1
-		} else {
-			p.Val = 0
-		}
-	case []byte:
-		i, err := strconv.ParseFloat(string(v), 64)
-		if err != nil {
-			return err
-		}
-		p.Val = i
-	case string:
-		i, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return err
-		}
-		p.Val = i
-	case time.Time:
-		p.Val = float64(v.UnixNano())
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to float64", value)
+func (p *Float64) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanFloat64(value)
+	if err != nil {
+		return err
+	}
+	p.Val = v
 	return nil
 }
 
@@ -1377,7 +783,7 @@ func (p Float64) Value() (driver.Value, error) {
 	return float64(p.Val), nil
 }
 
-func (p Float64) Equals(o interface{}) bool {
+func (p Float64) Equals(o any) bool {
 	switch t := o.(type) {
 	case Float64:
 		return p.Val == t.Val
@@ -1420,7 +826,7 @@ func (p Complex64) String() string {
 	return strconv.FormatComplex(complex128(p.Val), 'f', -1, 64)
 }
 
-func (p *Complex64) Scan(value interface{}) error {
+func (p *Complex64) Scan(value any) error {
 	switch v := value.(type) {
 	case int64:
 		return fmt.Errorf("can't convert type %T to complex64", value)
@@ -1458,7 +864,7 @@ func (p Complex64) Value() (driver.Value, error) {
 	return strconv.FormatComplex(complex128(p.Val), 'f', -1, 64), nil
 }
 
-func (p Complex64) Equals(o interface{}) bool {
+func (p Complex64) Equals(o any) bool {
 	switch t := o.(type) {
 	case Complex64:
 		return p.Val == t.Val
@@ -1501,7 +907,7 @@ func (p Complex128) String() string {
 	return strconv.FormatComplex(p.Val, 'f', -1, 64)
 }
 
-func (p *Complex128) Scan(value interface{}) error {
+func (p *Complex128) Scan(value any) error {
 	switch v := value.(type) {
 	case int64:
 		return fmt.Errorf("can't convert type %T to complex128", value)
@@ -1539,7 +945,7 @@ func (p Complex128) Value() (driver.Value, error) {
 	return strconv.FormatComplex(p.Val, 'f', -1, 64), nil
 }
 
-func (p Complex128) Equals(o interface{}) bool {
+func (p Complex128) Equals(o any) bool {
 	switch t := o.(type) {
 	case Complex128:
 		return p.Val == t.Val
@@ -1582,45 +988,15 @@ func (p String) String() string {
 	return p.Val
 }
 
-func (p *String) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case int64:
-		p.Val = strconv.FormatInt(v, 10)
-	case int32:
-		p.Val = strconv.FormatInt(int64(v), 10)
-	case int16:
-		p.Val = strconv.FormatInt(int64(v), 10)
-	case int8:
-		p.Val = strconv.FormatInt(int64(v), 10)
-	case int:
-		p.Val = strconv.FormatInt(int64(v), 10)
-	case uint64:
-		p.Val = strconv.FormatUint(uint64(v), 10)
-	case uint32:
-		p.Val = strconv.FormatUint(uint64(v), 10)
-	case uint16:
-		p.Val = strconv.FormatUint(uint64(v), 10)
-	case uint8:
-		p.Val = strconv.FormatUint(uint64(v), 10)
-	case uint:
-		p.Val = strconv.FormatUint(uint64(v), 10)
-	case float64:
-		p.Val = strconv.FormatFloat(float64(v), 'f', -1, 64)
-	case float32:
-		p.Val = strconv.FormatFloat(float64(v), 'f', -1, 32)
-	case bool:
-		p.Val = strconv.FormatBool(v)
-	case []byte:
-		p.Val = string(v)
-	case string:
-		p.Val = v
-	case time.Time:
-		p.Val = v.Format("2006-01-02 15:04:05")
-	case nil:
-		p = nil
-	default:
-		return fmt.Errorf("can't convert type %T to string", value)
+func (p *String) Scan(value any) error {
+	if value == nil {
+		return nil
 	}
+	v, err := scanString(value)
+	if err != nil {
+		return err
+	}
+	p.Val = v
 	return nil
 }
 
@@ -1628,7 +1004,7 @@ func (p String) Value() (driver.Value, error) {
 	return p.Val, nil
 }
 
-func (p String) Equals(o interface{}) bool {
+func (p String) Equals(o any) bool {
 	switch t := o.(type) {
 	case String:
 		return p.Val == t.Val
@@ -1676,7 +1052,7 @@ func (p Time) String() string {
 	return p.Val.String()
 }
 
-func (p *Time) Scan(value interface{}) error {
+func (p *Time) Scan(value any) error {
 	switch v := value.(type) {
 	case int64:
 		p.Val = time.Unix(v, 0)
@@ -1716,7 +1092,7 @@ func (p Time) Value() (driver.Value, error) {
 	return p.Val, nil
 }
 
-func (p Time) Equals(o interface{}) bool {
+func (p Time) Equals(o any) bool {
 	switch t := o.(type) {
 	case Time:
 		return p.Val.Equal(t.Val)

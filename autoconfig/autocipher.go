@@ -84,15 +84,15 @@ func (*AutoCipher) Name() string {
 	return CipherKey
 }
 
-func (p *AutoCipher) Named() map[string]interface{} {
-	return map[string]interface{}{
+func (p *AutoCipher) Named() map[string]any {
+	return map[string]any{
 		CipherKey: p.cipher,
 	}
 }
 
-func (p *AutoCipher) Typed() map[reflect.Type]interface{} {
+func (p *AutoCipher) Typed() map[reflect.Type]any {
 	refType := reflect.TypeOf((*interfaces.Cipher)(nil)).Elem()
-	return map[reflect.Type]interface{}{
+	return map[reflect.Type]any{
 		refType: p.cipher,
 	}
 }
@@ -144,18 +144,18 @@ func NewCipherImpl(skey string, shmacKey string, spublicKey string, sprivateKey 
 	return &CipherImpl{Key: key, HmacKey: hmacKey, PublicKey: publicKey, PrivateKey: privateKey}, nil
 }
 
-func (p *CipherImpl) Encrypt(s string) string {
+func (p *CipherImpl) Encrypt(s string) (string, error) {
 	src := []byte(s)
 	iv := p.Random(16)
 	src = pad(src)
 	dst := make([]byte, len(src))
 	block, err := aes.NewCipher(p.Key)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	encryptor := cipher.NewCBCEncrypter(block, iv)
 	encryptor.CryptBlocks(dst, src)
-	return base64.StdEncoding.EncodeToString(append(iv, dst...))
+	return base64.StdEncoding.EncodeToString(append(iv, dst...)), nil
 }
 
 func (p *CipherImpl) Decrypt(s string) (string, error) {
@@ -183,12 +183,12 @@ func (p *CipherImpl) GetPublickey() string {
 	return p.PublicKey
 }
 
-func (p *CipherImpl) PublickeyEncrypt(s string) string {
+func (p *CipherImpl) PublickeyEncrypt(s string) (string, error) {
 	enc, err := rsa.EncryptPKCS1v15(rand.Reader, &p.PrivateKey.PublicKey, []byte(s))
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(enc)
+	return base64.StdEncoding.EncodeToString(enc), nil
 }
 
 func (p *CipherImpl) PrivateKeyDecrypt(s string) (string, error) {
@@ -203,14 +203,13 @@ func (p *CipherImpl) PrivateKeyDecrypt(s string) (string, error) {
 	return string(src), nil
 }
 
-func (p *CipherImpl) Sign(msg string) string {
+func (p *CipherImpl) Sign(msg string) (string, error) {
 	hashed := sha512.Sum512([]byte(msg))
 	signature, err := rsa.SignPKCS1v15(rand.Reader, p.PrivateKey, crypto.SHA512, hashed[:])
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	bts := signature
-	return base64.StdEncoding.EncodeToString(bts)
+	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
 func (p *CipherImpl) Verify(msg string, sign string) bool {
@@ -241,10 +240,10 @@ func (p *CipherImpl) Random(n int) []byte {
 	return bts
 }
 
-func (p *CipherImpl) GenRsaKeyPair(length int) (string, string) {
+func (p *CipherImpl) GenRsaKeyPair(length int) (string, string, error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, length)
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
 	privateKeyPem := pem.EncodeToMemory(&pem.Block{
@@ -253,13 +252,13 @@ func (p *CipherImpl) GenRsaKeyPair(length int) (string, string) {
 	})
 	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 	publicKeyPem := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PUBLIC KEY",
 		Bytes: publicKeyBytes,
 	})
-	return string(privateKeyPem), string(publicKeyPem)
+	return string(privateKeyPem), string(publicKeyPem), nil
 }
 
 func pad(data []byte) []byte {

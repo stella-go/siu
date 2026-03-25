@@ -15,12 +15,12 @@
 package interfaces
 
 type Cipher interface {
-	Encrypt(string) string
+	Encrypt(string) (string, error)
 	Decrypt(string) (string, error)
 	GetPublickey() string
-	PublickeyEncrypt(string) string
+	PublickeyEncrypt(string) (string, error)
 	PrivateKeyDecrypt(string) (string, error)
-	Sign(string) string
+	Sign(string) (string, error)
 	Verify(string, string) bool
 	Hash(string) string
 	Hmac(string) string

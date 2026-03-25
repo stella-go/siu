@@ -50,7 +50,7 @@ func (s *S) Init() {
 
 type C struct{}
 
-func (c *C) Resolve(key string) (interface{}, bool) {
+func (c *C) Resolve(key string) (any, bool) {
 	return true, true
 }
 
@@ -69,7 +69,7 @@ func TestInject(t *testing.T) {
 
 type Resolver struct{}
 
-func (r *Resolver) Resolve(key string) (interface{}, bool) {
+func (r *Resolver) Resolve(key string) (any, bool) {
 	m := map[string]string{
 		"a.b.c": "123",
 	}

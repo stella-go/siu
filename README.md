@@ -2,11 +2,20 @@
 
 siu `/sjuː/ meaning very very fast` is an secondary packaging of the [Gin](https://github.com/gin-gonic/gin) Web Framework to quickly build enterprise-level Web applications.
 
-Siu quickly configures startup components through configuration files, such as rolling log, integrating component such as mysql, redis, zookeeper, CROS configuration, and support for history routing web applications. And also keeps open for extensions.
+Siu quickly configures startup components through configuration files, such as rolling log, integrating component such as mysql, redis, zookeeper, CORS configuration, and support for history routing web applications. And also keeps open for extensions.
 
 **Incompatibility Update**
 
 Since v1.1.0, The Inversion of Control (IoC) feature was introduced. The struct field tag was used to inject dependencies and attributes, and the functions of siu for obtaining dependencies and attributes manually was removed.
+
+Since v1.4.0, The following breaking changes were introduced:
+- **Cipher Interface**: `Encrypt`, `PublickeyEncrypt`, `Sign` now return `(string, error)` instead of `string`. Callers must handle the error.
+- **CORS Rename**: `MiddlewareCROS` renamed to `MiddlewareCORS`. Configuration keys changed from `middleware.cros.*` to `middleware.cors.*`. Environment variables changed from `STELLA_MIDDLEWARE_CROS_*` to `STELLA_MIDDLEWARE_CORS_*`.
+- **JWT Secret**: No longer auto-generates a random secret. If `middleware.jwt.secret` is not configured, siu will derive the secret from the `application` configuration key. If neither is set, it panics.
+- **Cron**: `siu.Cron()` now returns `error` instead of void.
+- **TaggedLogger**: `TagedLogger` renamed to `TaggedLogger`.
+- **Type Aliases**: All `interface{}` replaced with `any`.
+- **Constant Fixes**: `OssDdisableSSLKey` renamed to `OssDisableSSLKey`.
 
 ## Installation
 ```bash
@@ -108,7 +117,7 @@ logger:
 ```
 - **logger.siu** Whether to use the logging implementation of siu, set to false to use golang built-in log. Optional value `true` or `false`. Default value `true`.
 - **logger.level** Log Level. Optional value `debug`, `info`, `warn` or `error`. Default value `info`.
-- **logger.daliy** Whether to enable daily log rotating. Optional value `true` or `false`. Default value `true`.
+- **logger.daily** Whether to enable daily log rotating. Optional value `true` or `false`. Default value `true`.
 - **logger.path** Log Path Dir. Default value `.`.
 - **logger.fileName** Log file name. Default value `stdout`, does not print logs to a file, but rather to the console as a standard output stream.
 - **logger.maxFiles** Maximum number of files to be retained. Default value `30`.
@@ -282,6 +291,14 @@ Obtaining a Cipher instance:
 type Service struct {
 	Cipher      interfaces.Cipher           `@siu:""`
 }
+
+func (p *Service) Handle() {
+	encrypted, err := p.Cipher.Encrypt("plaintext")
+	if err != nil {
+		// handle error
+	}
+	fmt.Println(encrypted)
+}
 ```
 
 ## Middleware Related Configuration
@@ -292,8 +309,8 @@ middleware:
     match: "^/something(/|$)(.*)" # Set match regexp
     rewrite: "/$2" # Set replace repl
   access.disable: false # Set whether to disable access logging, default false
-  cros:
-    disable: false # Set whether to disable CROS, default false
+  cors:
+    disable: false # Set whether to disable CORS, default false
     wildcard: false # Set whether to enable wildcards, default true
     expose: "*" # Set "Access-Control-Expose-Headers", separated by commas, default "*"
   error-log.disable: false # Set whether to disable error logging, default false
@@ -307,15 +324,48 @@ middleware:
     timeout: 3600 # session idle timeout in seconds. Default value `86400`.
   jwt:
     disable: false # Set whether to disable jwt authorization, default false.
-    cookie-domain: # # Set domain the cookie will be set, default "".
+    cookie-domain: # Set domain the cookie will be set, default "".
     expire-seconds: 3600 # Set the jwt Token expire times.
-    secret: <some value> # Set jwt secret, default random value.
+    secret: <some value> # Set jwt secret. Required when JWT is enabled.
     excludes:  # Set jwt authorization exclude paths, default /login, /admin/login, /api/login.
       - "/login"
       - "/admin/login"
       - "/api/login"
+```
 
+**NOTICE**: Since v1.4.0, `middleware.jwt.secret` is required when JWT is enabled. If not set, siu will try to derive the secret from the `application` configuration key via SHA-256 hash. If neither is configured, the application will panic on startup.
 
+## Cron Scheduling
+Register cron jobs using `siu.Cron()`. The cron expression follows the standard 6-field format (second minute hour day month weekday).
+```go
+func main() {
+	err := siu.Cron("*/5 * * * * ?", func() {
+		fmt.Println("executed every 5 seconds")
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	siu.Run()
+}
+```
+
+## Utility Functions
+
+### fn.ToSnakeCase
+Convert CamelCase strings to snake_case.
+```go
+import "github.com/stella-go/siu/fn"
+
+fn.ToSnakeCase("MyFunction")  // "my_function"
+fn.ToSnakeCase("HTTPServer")  // "h_t_t_p_server"
+```
+
+### fn.IfElse
+Generic ternary helper.
+```go
+import "github.com/stella-go/siu/fn"
+
+result := fn.IfElse(true, "yes", "no")  // "yes"
 ```
 
 ## Custom Injection

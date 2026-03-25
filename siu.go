@@ -54,7 +54,7 @@ func Default() {
 	})
 }
 
-func DEBUG(format string, arr ...interface{}) {
+func DEBUG(format string, arr ...any) {
 	if strings.Contains(format, "__sLINE__") {
 		file, line := stack()
 		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
@@ -66,7 +66,7 @@ func DEBUG(format string, arr ...interface{}) {
 	}
 }
 
-func INFO(format string, arr ...interface{}) {
+func INFO(format string, arr ...any) {
 	if strings.Contains(format, "__sLINE__") {
 		file, line := stack()
 		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
@@ -78,7 +78,7 @@ func INFO(format string, arr ...interface{}) {
 	}
 }
 
-func WARN(format string, arr ...interface{}) {
+func WARN(format string, arr ...any) {
 	if strings.Contains(format, "__sLINE__") {
 		file, line := stack()
 		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
@@ -90,7 +90,7 @@ func WARN(format string, arr ...interface{}) {
 	}
 }
 
-func ERROR(format string, arr ...interface{}) {
+func ERROR(format string, arr ...any) {
 	if strings.Contains(format, "__sLINE__") {
 		file, line := stack()
 		format = strings.ReplaceAll(format, "__sLINE__", fmt.Sprintf("__LINE:%s:%d__", file, line))
@@ -102,17 +102,17 @@ func ERROR(format string, arr ...interface{}) {
 	}
 }
 
-func RegisterBean(name string, typ reflect.Type, obj interface{}) {
+func RegisterBean(name string, typ reflect.Type, obj any) {
 	Default()
 	ctx.RegisterBean(name, typ, obj)
 }
 
-func GetBeanByName(name string) (interface{}, bool) {
+func GetBeanByName(name string) (any, bool) {
 	Default()
 	return ctx.GetBeanByName(name)
 }
 
-func GetBeanByType(typ reflect.Type) (interface{}, bool) {
+func GetBeanByType(typ reflect.Type) (any, bool) {
 	Default()
 	return ctx.GetBeanByType(typ)
 }
@@ -147,19 +147,19 @@ func Forward(c *gin.Context, path string) {
 	ctx.Forward(c, path)
 }
 
-func Get(key string) (interface{}, bool) {
+func Get(key string) (any, bool) {
 	Default()
 	return ctx.Get(key)
 }
 
-func Set(key string, value interface{}) {
+func Set(key string, value any) {
 	Default()
 	ctx.Set(key, value)
 }
 
-func Cron(spec string, cmd func()) {
+func Cron(spec string, cmd func()) error {
 	Default()
-	ctx.Cron(spec, cmd)
+	return ctx.Cron(spec, cmd)
 }
 
 func Run() {

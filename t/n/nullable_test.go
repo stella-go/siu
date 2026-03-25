@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	db.Close()
 }
 
-func assertEquals(expected interface{}, actual interface{}) {
+func assertEquals(expected any, actual any) {
 	if expected != actual {
 		panic(fmt.Errorf("the expected value is %v and the actual value is %v", expected, actual))
 	}

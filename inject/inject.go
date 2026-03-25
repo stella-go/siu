@@ -45,11 +45,11 @@ var readyableType = reflect.TypeOf((*Readyable)(nil)).Elem()
 var readyables []Readyable
 
 type ValueResolver interface {
-	Resolve(string) (interface{}, bool)
+	Resolve(string) (any, bool)
 }
 type NopValueResolver struct{}
 
-func (*NopValueResolver) Resolve(string) (interface{}, bool) {
+func (*NopValueResolver) Resolve(string) (any, bool) {
 	return nil, false
 }
 
@@ -57,11 +57,11 @@ type ConfigResolver struct {
 	C config.Config
 }
 
-func (r *ConfigResolver) Resolve(key string) (interface{}, bool) {
+func (r *ConfigResolver) Resolve(key string) (any, bool) {
 	return r.C.Get(key)
 }
 
-func RegisterTyped(refType reflect.Type, obj interface{}) error {
+func RegisterTyped(refType reflect.Type, obj any) error {
 	if _, ok := typed.Load(refType); ok {
 		common.ERROR("Typed object %s is already registered", refType)
 		return fmt.Errorf("typed object %s is already registered", refType)
@@ -71,7 +71,7 @@ func RegisterTyped(refType reflect.Type, obj interface{}) error {
 	return nil
 }
 
-func RegisterNamed(name string, obj interface{}) error {
+func RegisterNamed(name string, obj any) error {
 	if _, ok := named.Load(name); ok {
 		common.ERROR("Named object \"%s\" is already registered", name)
 		return fmt.Errorf("named object \"%s\" is already registered", name)
@@ -81,15 +81,15 @@ func RegisterNamed(name string, obj interface{}) error {
 	return nil
 }
 
-func GetTyped(refType reflect.Type) (interface{}, bool) {
+func GetTyped(refType reflect.Type) (any, bool) {
 	return typed.Load(refType)
 }
 
-func GetNamed(name string) (interface{}, bool) {
+func GetNamed(name string) (any, bool) {
 	return named.Load(name)
 }
 
-func Inject(r ValueResolver, obj interface{}) error {
+func Inject(r ValueResolver, obj any) error {
 	defer func() {
 		if err := recover(); err != nil {
 			common.ERROR("panic:", err)
@@ -99,7 +99,7 @@ func Inject(r ValueResolver, obj interface{}) error {
 	return inject(r, obj, make(map[reflect.Type]reflect.Value))
 }
 
-func inject(r ValueResolver, obj interface{}, visited map[reflect.Type]reflect.Value) error {
+func inject(r ValueResolver, obj any, visited map[reflect.Type]reflect.Value) error {
 	prefType := reflect.TypeOf(obj)
 	prefValue := reflect.ValueOf(obj)
 	if prefType.Kind() != reflect.Ptr {
