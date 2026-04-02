@@ -99,7 +99,10 @@ func (p *MiddlewareAccess) Function() gin.HandlerFunc {
 			}
 			proto := c.Request.Proto
 			headers := p.headerString(c.Request.Header)
-			bts, _ := io.ReadAll(c.Request.Body)
+			var bts []byte
+			if c.Request.Body != nil {
+				bts, _ = io.ReadAll(c.Request.Body)
+			}
 			sb := &strings.Builder{}
 			if len(bts) > 0 {
 				s := string(bts)

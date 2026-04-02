@@ -34,6 +34,7 @@ import (
 	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/inject"
 	"github.com/stella-go/siu/interfaces"
+	"github.com/stella-go/siu/meta"
 	"github.com/stella-go/siu/middleware"
 )
 
@@ -161,7 +162,7 @@ func newContext(environment config.TypedConfig, contextLogger interfaces.Logger,
 	}
 	ctx.Register(&buildinRegister{ctx})
 	ctx.AutoFactory(&autoconfig.AutoMysql{}, &autoconfig.AutoGorm{}, &autoconfig.AutoRedis{}, &autoconfig.AutoZookeeper{}, &autoconfig.AutoOss{}, &autoconfig.AutoCipher{})
-	ctx.Use(&middleware.MiddlewareRewrite{}, &middleware.MiddlewareAccess{}, &middleware.MiddlewareCORS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{}, &middleware.MiddlewareSession{}, &middleware.MiddlewareJwt{})
+	ctx.Use(&middleware.MiddlewareRewrite{}, &middleware.MiddlewareAccess{}, &middleware.MiddlewareCORS{}, &middleware.MiddlewareErrorlog{}, &middleware.MiddlewareResource{}, &meta.MiddlewareSwagger{}, &meta.MiddlewareMCP{}, &middleware.MiddlewareSession{}, &middleware.MiddlewareJwt{})
 	return ctx
 }
 
@@ -499,9 +500,15 @@ func (c *context) Run() {
 		for name, function := range rs {
 			tokens := strings.Split(name, " ")
 			methods := strings.Split(tokens[0], ",")
+			path := tokens[1]
 			for _, method := range methods {
-				group.Handle(strings.ToUpper(method), tokens[1], function)
+				group.Handle(strings.ToUpper(method), path, function)
 			}
+			fullPath := prefix + path
+			def := getRouteDef(function)
+
+			meta.CollectSwaggerData(methods, fullPath, def)
+			meta.CollectMCPData(methods, fullPath, def)
 		}
 	}
 	inject.InvokeReady()

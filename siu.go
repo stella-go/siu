@@ -25,6 +25,7 @@ import (
 	"github.com/stella-go/siu/common"
 	"github.com/stella-go/siu/config"
 	"github.com/stella-go/siu/interfaces"
+	"github.com/stella-go/siu/meta"
 )
 
 var ctx *context
@@ -174,4 +175,29 @@ func stack() (string, int) {
 	}
 	file = file[strings.LastIndex(file, "/")+1:]
 	return file, line
+}
+
+// ParamDef is a type alias for meta.ParamDef.
+type ParamDef = meta.ParamDef
+
+// RouteDef is a type alias for meta.RouteDef.
+type RouteDef = meta.RouteDef
+
+// routeDefStore stores RouteDef attached to route handlers.
+var routeDefStore sync.Map
+
+// Meta attaches unified metadata to a route handler. The framework automatically
+// expands it into both Swagger and MCP formats.
+func Meta(handler gin.HandlerFunc, def RouteDef) gin.HandlerFunc {
+	key := reflect.ValueOf(handler).Pointer()
+	routeDefStore.Store(key, &def)
+	return handler
+}
+
+func getRouteDef(handler gin.HandlerFunc) *RouteDef {
+	key := reflect.ValueOf(handler).Pointer()
+	if v, ok := routeDefStore.Load(key); ok {
+		return v.(*RouteDef)
+	}
+	return nil
 }

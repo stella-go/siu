@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -55,10 +56,19 @@ func (p *MiddlewareResource) Function() gin.HandlerFunc {
 	resourcePrefix := p.Conf.GetStringOr(ResourceMiddlePrefixKey, ResourceMiddleDefaultPrefix)
 	prefix := path.Join(serverPrefix, resourcePrefix)
 	resourceExclude := p.Conf.GetStringOr(ResourceMiddleExcludeKey, "")
-	exclude := path.Join(serverPrefix, resourceExclude)
+	excludes := strings.Split(resourceExclude, ",")
+	if !slices.Contains(excludes, "/swagger") {
+		excludes = append(excludes, "/swagger")
+	}
+	if !slices.Contains(excludes, "/mcp") {
+		excludes = append(excludes, "/mcp")
+	}
+	for i, exclude := range excludes {
+		excludes[i] = path.Join(serverPrefix, strings.TrimSpace(exclude))
+	}
 	indexNotFound := p.Conf.GetBoolOr(ResourceMiddleIndexNotFoundKey, false)
 	compress := p.Conf.GetBoolOr(ResourceMiddleCompressKey, true)
-	return Serve(prefix, exclude, indexNotFound, compress, LocalFile("resources", true))
+	return Serve(prefix, excludes, indexNotFound, compress, LocalFile("resources", true))
 }
 
 func (p *MiddlewareResource) Order() int {
@@ -67,7 +77,7 @@ func (p *MiddlewareResource) Order() int {
 
 type ServeFileSystem interface {
 	http.FileSystem
-	Exists(prefix string, exclude string, path string) bool
+	Exists(prefix string, path string) bool
 }
 
 type LocalFileSystem struct {
@@ -84,10 +94,7 @@ func LocalFile(root string, indexes bool) *LocalFileSystem {
 	}
 }
 
-func (l *LocalFileSystem) Exists(prefix string, exclude string, filepath string) bool {
-	if p := strings.TrimPrefix(filepath, exclude); exclude != "/" && len(p) < len(filepath) {
-		return false
-	}
+func (l *LocalFileSystem) Exists(prefix string, filepath string) bool {
 	if p := strings.TrimPrefix(filepath, prefix); prefix != "/" && len(p) < len(filepath) {
 		return true
 	}
@@ -116,7 +123,7 @@ func (w *GzipResponseWriter) WriteString(s string) (int, error) {
 	return w.gz.Write([]byte(s))
 }
 
-func Serve(prefix string, exclude string, indexNotFound bool, compress bool, fs ServeFileSystem) gin.HandlerFunc {
+func Serve(prefix string, excludes []string, indexNotFound bool, compress bool, fs ServeFileSystem) gin.HandlerFunc {
 	fileserver := http.FileServer(fs)
 	if prefix != "" {
 		fileserver = http.StripPrefix(prefix, fileserver)
@@ -124,6 +131,11 @@ func Serve(prefix string, exclude string, indexNotFound bool, compress bool, fs 
 	return func(c *gin.Context) {
 		if c.FullPath() != "" {
 			return
+		}
+		for _, exclude := range excludes {
+			if exclude != "/" && strings.HasPrefix(c.Request.URL.Path, exclude) {
+				return
+			}
 		}
 		writer := c.Writer
 		acceptGzip := false
@@ -154,7 +166,7 @@ func Serve(prefix string, exclude string, indexNotFound bool, compress bool, fs 
 			c.Abort()
 			return
 		}
-		if fs.Exists(prefix, exclude, c.Request.URL.Path) {
+		if fs.Exists(prefix, c.Request.URL.Path) {
 			fileserver.ServeHTTP(writer, c.Request)
 			c.Set(ContextResourceKey, true)
 			c.Abort()

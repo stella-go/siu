@@ -27,6 +27,14 @@ func IfElse[T any](b bool, t T, f T) T {
 	}
 }
 
+func IfElseFn[T any](b bool, t func() T, f func() T) T {
+	if b {
+		return t()
+	} else {
+		return f()
+	}
+}
+
 var snakeRe = regexp.MustCompile(`[A-Z]`)
 
 // ToSnakeCase converts a CamelCase string to snake_case.

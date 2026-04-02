@@ -335,6 +335,153 @@ middleware:
 
 **NOTICE**: Since v1.4.0, `middleware.jwt.secret` is required when JWT is enabled. If not set, siu will try to derive the secret from the `application` configuration key via SHA-256 hash. If neither is configured, the application will panic on startup.
 
+## Swagger API Documentation
+siu has built-in support for Swagger (OpenAPI 3.0) API documentation with a Swagger UI page. Both are disabled by default and can be enabled via configuration.
+
+### Configuration
+```yml
+swagger:
+  disable: false  # Set to false to enable Swagger, default true
+  path: /swagger  # Swagger UI base path, default "/swagger"
+  title: "My API"  # API document title, default "API Documentation"
+  description: "API description"  # API description, default ""
+  version: "1.0.0"  # API version, default "1.0.0"
+```
+
+When enabled, siu exposes:
+- `GET {swagger.path}/` — Swagger UI page (loads JS/CSS from CDN)
+- `GET {swagger.path}/doc.json` — OpenAPI 3.0 JSON spec
+
+### Zero-Code Integration
+When Swagger is enabled, siu **automatically generates** basic API documentation for all registered routes. No code changes are required — just set `swagger.disable: false` and restart the application.
+
+Auto-generated metadata includes:
+- Summary derived from method and path (e.g. `GET /users/{id}`)
+- Path parameters automatically detected from `:param` patterns
+- Request body schema for POST/PUT/PATCH methods (`additionalProperties: true`)
+- 200 OK response
+
+### Custom Metadata with `siu.Meta()`
+To provide richer API descriptions, wrap handlers with `siu.Meta()` using typed structs:
+```go
+func (p *UserRouter) Router() map[string]gin.HandlerFunc {
+	return map[string]gin.HandlerFunc{
+		"POST /users": siu.Meta(p.CreateUser, siu.RouteDef{
+			Name:    "create_user",       // MCP tool name (optional, auto-derived)
+			Summary: "Create a new user", // → swagger.summary + mcp.description
+			Params: map[string]siu.ParamDef{ // → swagger parameters/requestBody + mcp inputSchema
+				"name":  {Type: "string", Description: "User name", Required: true},
+				"email": {Type: "string", Description: "Email address"},
+			},
+		}),
+		"GET /users/:id": siu.Meta(p.GetUser, siu.RouteDef{
+			Summary: "Get user by ID",
+			Params: map[string]siu.ParamDef{
+				"id": {Type: "string", Description: "User ID", Required: true},
+			},
+		}),
+		"DELETE /users/:id": p.DeleteUser, // auto-generated metadata
+	}
+}
+```
+
+### Struct Tag Metadata with `@meta`
+Instead of manually building `Params`, you can pass request/response struct instances via the `Request` and `Response` fields. siu will automatically parse struct tags to generate parameter definitions.
+
+The `@meta` tag uses `"k=v,k=v"` format. Supported keys:
+| Key | Description | Example |
+|---|---|---|
+| `desc` | Field description | `desc=User name` |
+| `required` | Mark as required (flag or `=true`) | `required` or `required=true` |
+| `ignore` | Exclude field from output (flag or `=true`) | `ignore` or `ignore=true` |
+
+Field names are derived from the `json` tag (falls back to the Go field name). Field types are automatically mapped from Go types (`string` → `"string"`, `int` → `"integer"`, `float64` → `"number"`, `bool` → `"boolean"`, struct → `"object"`, slice → `"array"`).
+
+```go
+type CreateUserRequest struct {
+	Name  string `json:"name"  @meta:"desc=User name,required"`
+	Email string `json:"email" @meta:"desc=Email address"`
+	Age   int    `json:"age"   @meta:"desc=User age"`
+}
+
+type UserResponse struct {
+	ID    string `json:"id"    @meta:"desc=User ID"`
+	Name  string `json:"name"  @meta:"desc=User name"`
+	Email string `json:"email" @meta:"desc=Email address"`
+}
+
+func (p *UserRouter) Router() map[string]gin.HandlerFunc {
+	return map[string]gin.HandlerFunc{
+		"POST /users": siu.Meta(p.CreateUser, siu.RouteDef{
+			Summary:  "Create a new user",
+			Request:  CreateUserRequest{},  // auto-parse request body schema
+			Response: UserResponse{},       // auto-parse response schema (Swagger only)
+		}),
+	}
+}
+```
+
+Features:
+- **Nested structs**: Struct fields are recursively parsed as `"object"` with `properties`
+- **Array/Slice fields**: Automatically mapped to `"array"` with element `items` schema
+- **Embedded structs**: Anonymous struct fields are flattened into the parent
+- **`json:"-"`**: Fields with `json:"-"` are skipped
+- **`time.Time`**: Automatically mapped to `"string"` type
+- **Manual override**: `Params` entries take precedence over auto-parsed `Request` fields when both are provided
+Routes without decorators will use auto-generated metadata. Routes with decorators will use the provided metadata instead.
+
+`siu.Meta()` automatically generates both Swagger and MCP formats from a single definition:
+- `Summary` → `swagger.summary` + `mcp.description`
+- `Params` → `swagger.parameters` / `swagger.requestBody` + `mcp.inputSchema`
+- Path params (e.g. `:id`) are auto-detected as `in: path` for Swagger and `required` for MCP
+- Non-path params become `in: query` for GET/DELETE/HEAD, or `requestBody` properties for POST/PUT/PATCH
+
+## MCP (Model Context Protocol)
+siu has built-in support for MCP Streamable HTTP, enabling AI agents (such as Claude, Cursor, etc.) to discover and invoke your API as tools. Disabled by default.
+
+### Configuration
+```yml
+mcp:
+  disable: false  # Set to false to enable MCP, default true
+  path: /mcp      # MCP endpoint path, default "/mcp"
+```
+
+When enabled, siu exposes a `POST {mcp.path}` endpoint implementing the MCP JSON-RPC 2.0 protocol:
+- `initialize` — Returns server capabilities
+- `tools/list` — Returns all registered tools
+- `tools/call` — Invokes a tool by name with arguments
+
+### Zero-Code Integration
+When MCP is enabled, siu **automatically generates** tool definitions for all registered routes. No code changes are required — just set `mcp.disable: false` and restart the application.
+
+Auto-generated tool definitions include:
+- Tool name derived from method and path (e.g. `GET /users/:id` → `get_users_id`)
+- Path parameters as required fields in inputSchema
+- Open schema (`additionalProperties: true`) for additional parameters
+
+### Custom Metadata with `siu.Meta()` (same decorator)
+`siu.Meta()` works for both Swagger and MCP simultaneously — see the example above. There is no need for separate MCP-specific decorators.
+
+**Decorator function summary:**
+| Function | Description |
+|---|---|
+| `siu.Meta(handler, siu.RouteDef{...})` | Attach typed metadata, generates both Swagger and MCP |
+
+| RouteDef Field | Description |
+|---|---|
+| `Name` | MCP tool name (optional, auto-derived from method+path) |
+| `Summary` | → `swagger.summary` + `mcp.description` |
+| `Params` | Manual parameter definitions → `swagger.parameters`/`requestBody` + `mcp.inputSchema` |
+| `Request` | Request struct instance; fields are auto-parsed via `@meta` tag |
+| `Response` | Response struct instance; auto-parsed for Swagger response schema |
+
+The decorator returns the original handler unchanged.
+
+### Authentication Pass-Through
+When MCP is used alongside authentication middleware (JWT, Session, etc.), siu automatically forwards `Authorization` and `Cookie` headers from the external MCP request to the internal tool call. This ensures that auth middleware applies transparently — the AI client simply includes the same credentials it would use for a direct API call.
+
+No additional configuration is needed. If the AI client sends a valid `Authorization: Bearer <token>` or `Cookie` header on the MCP request, the internal tool dispatch will carry the same headers and pass through any middleware checks.
+
 ## Cron Scheduling
 Register cron jobs using `siu.Cron()`. The cron expression follows the standard 6-field format (second minute hour day month weekday).
 ```go

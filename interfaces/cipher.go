@@ -19,6 +19,7 @@ type Cipher interface {
 	Decrypt(string) (string, error)
 	GetPublickey() string
 	PublickeyEncrypt(string) (string, error)
+	ExternalPublickeyEncrypt(string, string) (string, error)
 	PrivateKeyDecrypt(string) (string, error)
 	Sign(string) (string, error)
 	Verify(string, string) bool

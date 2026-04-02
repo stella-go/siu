@@ -191,6 +191,26 @@ func (p *CipherImpl) PublickeyEncrypt(s string) (string, error) {
 	return base64.StdEncoding.EncodeToString(enc), nil
 }
 
+func (p *CipherImpl) ExternalPublickeyEncrypt(pubKey string, s string) (string, error) {
+	block, _ := pem.Decode([]byte(pubKey))
+	if block == nil {
+		return "", fmt.Errorf("failed to parse PEM block containing the key")
+	}
+	externalPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return "", err
+	}
+	rsaPubKey, ok := externalPublicKey.(*rsa.PublicKey)
+	if !ok {
+		return "", fmt.Errorf("not RSA public key")
+	}
+	enc, err := rsa.EncryptPKCS1v15(rand.Reader, rsaPubKey, []byte(s))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(enc), nil
+}
+
 func (p *CipherImpl) PrivateKeyDecrypt(s string) (string, error) {
 	enc, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
