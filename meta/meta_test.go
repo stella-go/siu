@@ -620,8 +620,8 @@ func TestExpandRouteDefMCP(t *testing.T) {
 		}
 		schema, _ := mcp["inputSchema"].(map[string]any)
 		props, _ := schema["properties"].(map[string]any)
-		if len(props) != 2 {
-			t.Errorf("Expected 2 mcp properties, got %d", len(props))
+		if len(props) != 3 {
+			t.Errorf("Expected 3 mcp properties, got %d", len(props))
 		}
 	})
 
@@ -774,8 +774,8 @@ func TestExpandRouteDefWithRequest(t *testing.T) {
 		mcp := expandMCPRouteDef("POST", "/users", def)
 		schema, _ := mcp["inputSchema"].(map[string]any)
 		props, _ := schema["properties"].(map[string]any)
-		if len(props) != 3 {
-			t.Errorf("Expected 3 mcp properties, got %d", len(props))
+		if len(props) != 4 {
+			t.Errorf("Expected 4 mcp properties, got %d", len(props))
 		}
 		nameProp, _ := props["name"].(map[string]any)
 		if nameProp["description"] != "User name" {

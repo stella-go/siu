@@ -16,7 +16,9 @@ package meta
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,6 +29,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stella-go/siu/common"
@@ -61,7 +64,81 @@ type MCPToolDef struct {
 var (
 	globalMCPToolMap  = make(map[string]MCPToolDef)
 	globalMCPToolList []map[string]any
+
+	sessionStore = make(map[string]*mcpSession)
+	sessionMu    sync.RWMutex
 )
+
+// --- Session management ---
+
+type sseClient struct {
+	ch chan string
+}
+
+type mcpSession struct {
+	id      string
+	mu      sync.Mutex
+	clients []*sseClient
+}
+
+func (s *mcpSession) addClient(c *sseClient) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clients = append(s.clients, c)
+}
+
+func (s *mcpSession) removeClient(c *sseClient) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, cl := range s.clients {
+		if cl == c {
+			s.clients = append(s.clients[:i], s.clients[i+1:]...)
+			return
+		}
+	}
+}
+
+func (s *mcpSession) closeAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, c := range s.clients {
+		close(c.ch)
+	}
+	s.clients = nil
+}
+
+func generateSessionID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func createSession() *mcpSession {
+	s := &mcpSession{id: generateSessionID()}
+	sessionMu.Lock()
+	sessionStore[s.id] = s
+	sessionMu.Unlock()
+	return s
+}
+
+func getSession(id string) *mcpSession {
+	sessionMu.RLock()
+	defer sessionMu.RUnlock()
+	return sessionStore[id]
+}
+
+func deleteSessionByID(id string) bool {
+	sessionMu.Lock()
+	s, ok := sessionStore[id]
+	if ok {
+		delete(sessionStore, id)
+	}
+	sessionMu.Unlock()
+	if ok {
+		s.closeAll()
+	}
+	return ok
+}
 
 func CollectMCPData(methods []string, fullPath string, def *RouteDef) {
 	var effective map[string]any
@@ -143,17 +220,91 @@ func (p *MiddlewareMCP) Function() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if c.Request.Method == http.MethodPost && c.Request.URL.Path == p.basePath {
-			p.handleRequest(c)
-			c.Abort()
+		if c.Request.URL.Path != p.basePath {
+			c.Next()
 			return
 		}
-		c.Next()
+		switch c.Request.Method {
+		case http.MethodPost:
+			p.handleRequest(c)
+		case http.MethodGet:
+			p.handleGet(c)
+		case http.MethodDelete:
+			p.handleDelete(c)
+		default:
+			c.Header("Allow", "GET, POST, DELETE")
+			c.Status(http.StatusMethodNotAllowed)
+		}
+		c.Abort()
 	}
 }
 
 func (p *MiddlewareMCP) Order() int {
 	return MCPMiddleOrder
+}
+
+func (p *MiddlewareMCP) handleGet(c *gin.Context) {
+	accept := c.GetHeader("Accept")
+	if strings.Contains(accept, "text/event-stream") {
+		p.handleSSE(c)
+		return
+	}
+	// Normal GET: return server info and tool list
+	c.JSON(http.StatusOK, map[string]any{
+		"serverInfo": map[string]any{
+			"name":    p.cfg.ServerName,
+			"version": p.cfg.ServerVersion,
+		},
+		"tools": globalMCPToolList,
+	})
+}
+
+func (p *MiddlewareMCP) handleSSE(c *gin.Context) {
+	sessionID := c.GetHeader("Mcp-Session-Id")
+	session := getSession(sessionID)
+	if session == nil {
+		c.JSON(http.StatusBadRequest, jsonRPCResponse{
+			JSONRPC: "2.0",
+			Error: map[string]any{
+				"code":    -32600,
+				"message": "Invalid or missing Mcp-Session-Id",
+			},
+		})
+		return
+	}
+
+	client := &sseClient{ch: make(chan string, 16)}
+	session.addClient(client)
+	defer session.removeClient(client)
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("Mcp-Session-Id", session.id)
+	c.Writer.WriteHeader(http.StatusOK)
+	c.Writer.Flush()
+
+	for {
+		select {
+		case data, ok := <-client.ch:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(c.Writer, "event: message\ndata: %s\n\n", data)
+			c.Writer.Flush()
+		case <-c.Request.Context().Done():
+			return
+		}
+	}
+}
+
+func (p *MiddlewareMCP) handleDelete(c *gin.Context) {
+	sessionID := c.GetHeader("Mcp-Session-Id")
+	if deleteSessionByID(sessionID) {
+		c.Status(http.StatusOK)
+	} else {
+		c.Status(http.StatusNotFound)
+	}
 }
 
 // --- JSON-RPC handling ---
@@ -185,8 +336,25 @@ func (p *MiddlewareMCP) handleRequest(c *gin.Context) {
 		})
 		return
 	}
+	// Session validation: non-initialize requests with a session ID must be valid
+	sessionID := c.GetHeader("Mcp-Session-Id")
+	if req.Method != "initialize" && sessionID != "" {
+		if s := getSession(sessionID); s == nil {
+			c.JSON(http.StatusNotFound, jsonRPCResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Error: map[string]any{
+					"code":    -32600,
+					"message": "Invalid session",
+				},
+			})
+			return
+		}
+	}
 	switch req.Method {
 	case "initialize":
+		session := createSession()
+		c.Header("Mcp-Session-Id", session.id)
 		initResult := map[string]any{
 			"protocolVersion": "2025-03-26",
 			"capabilities": map[string]any{
@@ -284,6 +452,18 @@ func (p *MiddlewareMCP) callTool(c *gin.Context, tool MCPToolDef, arguments map[
 		remaining[k] = v
 	}
 
+	// Extract headers from arguments for HTTP header mapping
+	var extraHeaders map[string]string
+	if h, ok := remaining["headers"]; ok {
+		if hm, ok := h.(map[string]any); ok {
+			extraHeaders = make(map[string]string, len(hm))
+			for k, v := range hm {
+				extraHeaders[k] = fmt.Sprintf("%v", v)
+			}
+		}
+		delete(remaining, "headers")
+	}
+
 	for k, v := range remaining {
 		placeholder := ":" + k
 		if strings.Contains(path, placeholder) {
@@ -337,6 +517,9 @@ func (p *MiddlewareMCP) callTool(c *gin.Context, tool MCPToolDef, arguments map[
 		if v := c.GetHeader(h); v != "" {
 			req.Header.Set(h, v)
 		}
+	}
+	for k, v := range extraHeaders {
+		req.Header.Set(k, v)
 	}
 
 	w := httptest.NewRecorder()
@@ -407,6 +590,14 @@ func generateMCPMeta(method string, path string) map[string]any {
 		}
 	}
 
+	properties["headers"] = map[string]any{
+		"type":        "object",
+		"description": "HTTP headers to include in the request",
+		"additionalProperties": map[string]any{
+			"type": "string",
+		},
+	}
+
 	inputSchema := map[string]any{
 		"type":                 "object",
 		"properties":           properties,
@@ -448,6 +639,14 @@ func expandMCPRouteDef(method, path string, def RouteDef) map[string]any {
 		if p.Required || pathParamSet[name] {
 			mcpRequired = append(mcpRequired, name)
 		}
+	}
+
+	mcpProps["headers"] = map[string]any{
+		"type":        "object",
+		"description": "HTTP headers to include in the request",
+		"additionalProperties": map[string]any{
+			"type": "string",
+		},
 	}
 
 	inputSchema := map[string]any{
