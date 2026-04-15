@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"unsafe"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stella-go/siu/common"
@@ -188,14 +189,23 @@ var routeDefStore sync.Map
 
 // Meta attaches unified metadata to a route handler. The framework automatically
 // expands it into both Swagger and MCP formats.
+// Each call returns a new wrapper to guarantee a unique function pointer as key,
+// preventing RouteDef overwrites when the same handler is reused across routes.
 func Meta(handler gin.HandlerFunc, def RouteDef) gin.HandlerFunc {
-	key := reflect.ValueOf(handler).Pointer()
-	routeDefStore.Store(key, &def)
-	return handler
+	d := &def
+	wrapped := func(c *gin.Context) {
+		handler(c)
+	}
+	// Use the funcval pointer (closure instance address) as the key.
+	// reflect.ValueOf(fn).Pointer() returns the code pointer which is shared
+	// across all closures of the same template, causing overwrites.
+	key := *(*uintptr)(unsafe.Pointer(&wrapped))
+	routeDefStore.Store(key, d)
+	return wrapped
 }
 
 func getRouteDef(handler gin.HandlerFunc) *RouteDef {
-	key := reflect.ValueOf(handler).Pointer()
+	key := *(*uintptr)(unsafe.Pointer(&handler))
 	if v, ok := routeDefStore.Load(key); ok {
 		return v.(*RouteDef)
 	}
