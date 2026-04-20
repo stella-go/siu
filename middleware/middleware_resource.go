@@ -57,14 +57,14 @@ func (p *MiddlewareResource) Function() gin.HandlerFunc {
 	prefix := path.Join(serverPrefix, resourcePrefix)
 	resourceExclude := p.Conf.GetStringOr(ResourceMiddleExcludeKey, "/swagger, /mcp")
 	excludes := strings.Split(resourceExclude, ",")
+	for i, exclude := range excludes {
+		excludes[i] = path.Join(serverPrefix, strings.TrimSpace(exclude))
+	}
 	if !slices.Contains(excludes, "/swagger") {
 		excludes = append(excludes, "/swagger")
 	}
 	if !slices.Contains(excludes, "/mcp") {
 		excludes = append(excludes, "/mcp")
-	}
-	for i, exclude := range excludes {
-		excludes[i] = path.Join(serverPrefix, strings.TrimSpace(exclude))
 	}
 	indexNotFound := p.Conf.GetBoolOr(ResourceMiddleIndexNotFoundKey, false)
 	compress := p.Conf.GetBoolOr(ResourceMiddleCompressKey, true)
